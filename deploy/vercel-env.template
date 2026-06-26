@@ -1,0 +1,7 @@
+# Vercel → Project → Settings → Environment Variables
+# Apply to Production, Preview, and Development
+
+VITE_SUPABASE_URL=https://safwaqsrvvwgnmsazrjm.supabase.co
+VITE_SUPABASE_ANON_KEY=<paste anon public key from Supabase Dashboard>
+
+# After saving: Deployments → Redeploy latest (or push to GitHub)

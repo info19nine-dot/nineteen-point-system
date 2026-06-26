@@ -1,0 +1,35 @@
+{
+    "version": "0.0.0",
+    "name": "loyalty-app",
+    "scripts": {
+        "preview": "vite preview",
+        "build": "tsc -b && vite build",
+        "dev": "vite",
+        "lint": "eslint .",
+        "verify:supabase": "node scripts/verify-supabase.mjs",
+        "setup:staff-n19": "node scripts/setup-staff-n19.mjs"
+    },
+    "devDependencies": {
+        "@types/react": "^18.3.3",
+        "@types/react-dom": "^18.3.0",
+        "@vitejs/plugin-react": "^4.3.1",
+        "autoprefixer": "^10.4.20",
+        "postcss": "^8.4.41",
+        "tailwindcss": "^3.4.10",
+        "typescript": "^5.5.3",
+        "vite": "^5.4.1"
+    },
+    "type": "module",
+    "dependencies": {
+        "@supabase/supabase-js": "^2.45.0",
+        "@types/qrcode.react": "^1.0.5",
+        "@types/react-qr-reader": "^2.1.7",
+        "lucide-react": "^0.559.0",
+        "qrcode.react": "^4.2.0",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-qr-reader": "^3.0.0-beta-1",
+        "react-router-dom": "^6.26.0"
+    },
+    "private": true
+}

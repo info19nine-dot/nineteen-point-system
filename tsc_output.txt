@@ -1,0 +1,23 @@
+src/contexts/SupabaseContext.tsx(43,48): error TS7031: Binding element 'session' implicitly has an 'any' type.
+src/contexts/SupabaseContext.tsx(51,73): error TS7006: Parameter '_event' implicitly has an 'any' type.
+src/contexts/SupabaseContext.tsx(51,81): error TS7006: Parameter 'session' implicitly has an 'any' type.
+src/contexts/SupabaseContext.tsx(80,10): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabaseClient.ts(3,33): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/lib/supabaseClient.ts(4,37): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/pages/admin/Dashboard.tsx(5,56): error TS6133: 'RefreshCw' is declared but its value is never read.
+src/pages/admin/Dashboard.tsx(137,11): error TS6133: 'onMouseDown' is declared but its value is never read.
+src/pages/admin/Dashboard.tsx(144,11): error TS6133: 'onMouseLeave' is declared but its value is never read.
+src/pages/admin/Dashboard.tsx(148,11): error TS6133: 'onMouseUp' is declared but its value is never read.
+src/pages/admin/Dashboard.tsx(152,11): error TS6133: 'onMouseMove' is declared but its value is never read.
+src/pages/admin/Dashboard.tsx(363,11): error TS6133: 'regenerateQr' is declared but its value is never read.
+src/pages/admin/desktop/DesktopDashboard.tsx(4,220): error TS6133: 'MessageCircle' is declared but its value is never read.
+src/pages/admin/desktop/DesktopDashboard.tsx(4,235): error TS6133: 'PenTool' is declared but its value is never read.
+src/pages/admin/desktop/DesktopDashboard.tsx(147,11): error TS6133: 'handleOpenEdit' is declared but its value is never read.
+src/pages/admin/desktop/DesktopMemberDetail.tsx(653,11): error TS6133: 'handleOpenEdit' is declared but its value is never read.
+src/pages/admin/MemberDetail.tsx(41,7): error TS6133: 'LOAD_MORE_INCREMENT' is declared but its value is never read.
+src/pages/admin/MemberDetail.tsx(62,12): error TS6133: 'adjustKind' is declared but its value is never read.
+src/pages/admin/MemberDetail.tsx(62,24): error TS6133: 'setAdjustKind' is declared but its value is never read.
+src/pages/admin/MemberDetail.tsx(217,11): error TS6133: 'handleOpenEdit' is declared but its value is never read.
+src/pages/admin/Settings.tsx(19,12): error TS6133: 'isLoading' is declared but its value is never read.
+src/pages/auth/PasswordReset.tsx(2,10): error TS6133: 'useNavigate' is declared but its value is never read.
+src/pages/auth/UpdatePassword.tsx(7,11): error TS6133: 'navigate' is declared but its value is never read.

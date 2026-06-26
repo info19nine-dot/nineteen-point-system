@@ -1,0 +1,14 @@
+# Supabase Dashboard → Authentication → URL Configuration
+# Project: nineteen-point-system (safwaqsrvvwgnmsazrjm)
+
+Site URL (set to Vercel production URL when known; until then):
+http://localhost:5173
+
+Redirect URLs (add all):
+http://localhost:5173/**
+http://localhost:5174/**
+http://127.0.0.1:5173/**
+http://127.0.0.1:5174/**
+https://<your-vercel-app>.vercel.app/**
+
+# Providers → Email: enabled (this app uses email + password only; no Google OAuth in code)
