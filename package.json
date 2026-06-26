@@ -24,6 +24,7 @@
         "@supabase/supabase-js": "^2.45.0",
         "@types/qrcode.react": "^1.0.5",
         "@types/react-qr-reader": "^2.1.7",
+        "html5-qrcode": "^2.3.8",
         "lucide-react": "^0.559.0",
         "qrcode.react": "^4.2.0",
         "react": "^18.3.1",

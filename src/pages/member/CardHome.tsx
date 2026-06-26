@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Scan, QrCode, ChevronLeft, X, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
 import { QRCodeCanvas } from 'qrcode.react';
-import { QrReader } from 'react-qr-reader';
+import { QrScanner } from '../../components/features/card/QrScanner';
 import { Skeleton } from '../../components/ui/skeleton';
 
 // 取引履歴の型定義
@@ -230,80 +230,70 @@ const CardHome = () => {
   // ----------------------------------------------------------------
   // Real QR Scan Logic (Member EARNS points)
   // ----------------------------------------------------------------
-  const handleScanResult = async (result: any, _error: any) => {
-      if (!!result) {
-          // Prevent multiple submission
-          if (successMode !== 'none' || isSubmitting) return;
+  const handleScanResult = async (text: string) => {
+      if (successMode !== 'none' || isSubmitting) return;
+      if (!text) return;
 
-          try {
-              const text = result?.text;
-              if (!text) return;
-
-              // Security Check: Blacklist or Deleted
-              if (profile?.is_blacklisted) {
-                  setErrorMode('suspended');
-                  return;
-              }
-              if (profile?.is_deleted) {
-                  setErrorMode('deleted');
-                  return;
-              }
-
-              let data;
-              try {
-                  data = JSON.parse(text);
-              } catch (e) {
-                  console.warn("Invalid JSON QR");
-                  return;
-              }
-              
-              // NEW: Extract qrId & servedBy
-              const { type, courseId, courseName, timestamp, qrId, servedBy } = data;
-              const amount = data.amount ?? data.points;
-
-              if (type !== 'EARN' || !amount) {
-                  return;
-              }
-
-              // Basic Replay Protection (checking timestamp, just logging for now)
-              const now = Date.now();
-              if (now - timestamp > 1000 * 60 * 60) { // 1 hour expiration
-                  setActiveModal({ type: 'error', title: 'エラー', message: "QRコードの有効期限が切れています" });
-                  setActiveTab('home');
-                  return;
-              }
-
-              setIsSubmitting(true);
-
-              // Execute Transaction
-              // Execute Transaction (SECURE RPC with Replay Protection)
-              const { error: rpcError } = await supabase.rpc('execute_point_transaction', {
-                  p_amount: Number(amount),
-                  p_description: courseName ? `【利用】${courseName}` : `コース利用: ${courseId || 'Manual'}`,
-                  p_type: 'EARN',
-                  p_qr_id: qrId, // Send Unique QR ID
-                  p_served_by: servedBy || null // Send Staff Name (Optional)
-              });
-
-              if (rpcError) throw rpcError;
-
-             // Success
-             setEarnedAmount(Number(amount));
-             setSuccessMode('earn');
-             setActiveTab('home');
-             fetchHistory(); // Refresh
-             setIsSubmitting(false);
-
-             setTimeout(() => {
-                 setSuccessMode('none');
-             }, 3000);
-
-          } catch (e: any) {
-              console.error("Earn Error:", e);
-              setActiveModal({ type: 'error', title: 'エラー', message: "ポイント獲得に失敗しました\n" + (e.message || JSON.stringify(e)) });
-              setIsSubmitting(false);
-              setActiveTab('home');
+      try {
+          if (profile?.is_blacklisted) {
+              setErrorMode('suspended');
+              return;
           }
+          if (profile?.is_deleted) {
+              setErrorMode('deleted');
+              return;
+          }
+
+          let data;
+          try {
+              data = JSON.parse(text);
+          } catch {
+              setActiveModal({ type: 'error', title: '読み取りエラー', message: 'このQRコードは店舗のポイント用QRではありません' });
+              return;
+          }
+
+          const { type, courseId, courseName, timestamp, qrId, servedBy } = data;
+          const amount = data.amount ?? data.points;
+
+          if (type !== 'EARN' || !amount) {
+              setActiveModal({ type: 'error', title: '読み取りエラー', message: '店舗のコースQRを選んでから表示されたコードを読み取ってください' });
+              return;
+          }
+
+          const now = Date.now();
+          if (!timestamp || now - timestamp > 1000 * 60 * 60) {
+              setActiveModal({ type: 'error', title: 'エラー', message: 'QRコードの有効期限が切れています' });
+              setActiveTab('home');
+              return;
+          }
+
+          setIsSubmitting(true);
+
+          const { error: rpcError } = await supabase.rpc('execute_point_transaction', {
+              p_amount: Number(amount),
+              p_description: courseName ? `【利用】${courseName}` : `コース利用: ${courseId || 'Manual'}`,
+              p_type: 'EARN',
+              p_qr_id: qrId,
+              p_served_by: servedBy || null
+          });
+
+          if (rpcError) throw rpcError;
+
+          setEarnedAmount(Number(amount));
+          setSuccessMode('earn');
+          setActiveTab('home');
+          fetchHistory();
+          setIsSubmitting(false);
+
+          setTimeout(() => {
+              setSuccessMode('none');
+          }, 3000);
+
+      } catch (e: any) {
+          console.error("Earn Error:", e);
+          setActiveModal({ type: 'error', title: 'エラー', message: "ポイント獲得に失敗しました\n" + (e.message || JSON.stringify(e)) });
+          setIsSubmitting(false);
+          setActiveTab('home');
       }
   };
 
@@ -449,13 +439,10 @@ const CardHome = () => {
               </div>
               <div className="flex-grow flex flex-col items-center justify-center relative bg-black">
                   <div className="w-full h-full relative">
-                      <QrReader
-                          onResult={handleScanResult}
-                          constraints={{ facingMode: 'environment' }}
-                          className="w-full h-full object-cover"
-                          containerStyle={{ height: '100%', width: '100%' }}
-                          videoContainerStyle={{ height: '100%', width: '100%', paddingTop: 0 }}
-                          videoStyle={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                      <QrScanner
+                          onScan={handleScanResult}
+                          onError={(message) => setActiveModal({ type: 'error', title: 'カメラエラー', message })}
+                          className="w-full h-full"
                       />
                       {/* Overlay */}
                       <div className="absolute inset-0 border-[40px] border-black/50 flex items-center justify-center pointer-events-none">

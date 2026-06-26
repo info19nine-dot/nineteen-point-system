@@ -836,7 +836,7 @@ const Dashboard = () => {
                                         <div className="bg-slate-900 p-3 rounded-xl inline-block shadow-lg relative group transition-all duration-300 mb-6">
                                             <QRCodeCanvas 
                                                 value={earnQrPayload || 'NOT_SELECTED'} 
-                                                size={180} 
+                                                size={256} 
                                                 bgColor={"#1e293b"}
                                                 fgColor={"#ffffff"}
                                                 level={"H"}
