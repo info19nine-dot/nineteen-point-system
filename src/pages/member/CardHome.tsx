@@ -258,10 +258,10 @@ const CardHome = () => {
               }
               
               // NEW: Extract qrId & servedBy
-              const { type, amount, courseId, courseName, timestamp, qrId, servedBy } = data;
+              const { type, courseId, courseName, timestamp, qrId, servedBy } = data;
+              const amount = data.amount ?? data.points;
 
               if (type !== 'EARN' || !amount) {
-                  // Ignore non-earn QRs
                   return;
               }
 

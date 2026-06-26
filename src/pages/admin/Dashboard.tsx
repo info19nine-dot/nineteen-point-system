@@ -328,10 +328,11 @@ const Dashboard = () => {
         if (!activeCourse) return '';
         return JSON.stringify({
             type: 'EARN',
-            points: activeCourse.points,
+            amount: activeCourse.points,
             courseId: activeCourse.id,
-            servedBy: servedBy || 'なし', // Cast Name
-            staffName: staffName, // Staff Signature (only for manual)
+            courseName: activeCourse.label,
+            servedBy: servedBy || 'なし',
+            staffName: staffName,
             qrId: qrId,
             timestamp: Date.now()
         });
