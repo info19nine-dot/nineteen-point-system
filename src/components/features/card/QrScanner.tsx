@@ -6,7 +6,6 @@ type QrScannerProps = {
     onScan: (text: string) => void;
     onError?: (message: string) => void;
     className?: string;
-    showRefocusHint?: boolean;
 };
 
 type CameraStartConfig = string | MediaTrackConstraints | { facingMode: string };
@@ -64,7 +63,7 @@ async function pickCameraConfigs(): Promise<CameraStartConfig[]> {
     return configs;
 }
 
-async function enhanceVideoTrack(elementId: string) {
+async function applyContinuousFocus(elementId: string) {
     const video = document.querySelector(`#${elementId} video`) as HTMLVideoElement | null;
     const track =
         video?.srcObject instanceof MediaStream
@@ -75,23 +74,41 @@ async function enhanceVideoTrack(elementId: string) {
     try {
         const caps = track.getCapabilities?.() as MediaTrackCapabilities & {
             focusMode?: string[];
-            zoom?: { min: number; max: number; step?: number };
         };
 
-        const advanced: Record<string, unknown>[] = [];
+        if (caps?.focusMode?.includes('continuous')) {
+            await track.applyConstraints({
+                advanced: [{ focusMode: 'continuous' }],
+            } as unknown as MediaTrackConstraints);
+        }
+    } catch {
+        /* best-effort */
+    }
+}
+
+async function triggerTapToFocus(elementId: string) {
+    const video = document.querySelector(`#${elementId} video`) as HTMLVideoElement | null;
+    const track =
+        video?.srcObject instanceof MediaStream
+            ? video.srcObject.getVideoTracks()[0]
+            : undefined;
+    if (!track) return;
+
+    try {
+        const caps = track.getCapabilities?.() as MediaTrackCapabilities & {
+            focusMode?: string[];
+        };
+
+        if (caps?.focusMode?.includes('single-shot')) {
+            await track.applyConstraints({
+                advanced: [{ focusMode: 'single-shot' }],
+            } as unknown as MediaTrackConstraints);
+        }
 
         if (caps?.focusMode?.includes('continuous')) {
-            advanced.push({ focusMode: 'continuous' });
-        } else if (caps?.focusMode?.includes('single-shot')) {
-            advanced.push({ focusMode: 'single-shot' });
-        }
-
-        if (caps?.zoom && typeof caps.zoom.min === 'number') {
-            advanced.push({ zoom: caps.zoom.min });
-        }
-
-        if (advanced.length > 0) {
-            await track.applyConstraints({ advanced } as MediaTrackConstraints);
+            await track.applyConstraints({
+                advanced: [{ focusMode: 'continuous' }],
+            } as unknown as MediaTrackConstraints);
         }
     } catch {
         /* best-effort */
@@ -102,7 +119,6 @@ export const QrScanner = ({
     onScan,
     onError,
     className,
-    showRefocusHint = false,
 }: QrScannerProps) => {
     const reactId = useId().replace(/:/g, '');
     const elementId = `qr-scanner-${reactId}`;
@@ -112,9 +128,9 @@ export const QrScanner = ({
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const hostRef = useRef<HTMLDivElement>(null);
     const activeRef = useRef(true);
-    const [isRefocusing, setIsRefocusing] = useState(false);
     const [isStarting, setIsStarting] = useState(true);
     const [startError, setStartError] = useState<string | null>(null);
+    const [isRefocusing, setIsRefocusing] = useState(false);
 
     onScanRef.current = onScan;
     onErrorRef.current = onError;
@@ -155,7 +171,7 @@ export const QrScanner = ({
                     handleScan,
                     () => {}
                 );
-                await enhanceVideoTrack(elementId);
+                await applyContinuousFocus(elementId);
                 return;
             } catch (e) {
                 lastError = e;
@@ -194,15 +210,15 @@ export const QrScanner = ({
         }
     }, [startScanner]);
 
-    const refocus = useCallback(async () => {
-        if (isRefocusing) return;
+    const handleTapToFocus = useCallback(async () => {
+        if (isStarting || startError || isRefocusing) return;
         setIsRefocusing(true);
         try {
-            await runStart();
+            await triggerTapToFocus(elementId);
         } finally {
-            setIsRefocusing(false);
+            window.setTimeout(() => setIsRefocusing(false), 400);
         }
-    }, [isRefocusing, runStart]);
+    }, [elementId, isStarting, startError, isRefocusing]);
 
     useEffect(() => {
         activeRef.current = true;
@@ -225,13 +241,13 @@ export const QrScanner = ({
         <div
             ref={hostRef}
             className={`qr-scanner-host ${className ?? ''}`}
-            onClick={showRefocusHint && !startError ? refocus : undefined}
-            role={showRefocusHint && !startError ? 'button' : undefined}
-            aria-label={showRefocusHint && !startError ? 'タップでピントを再調整' : undefined}
+            onClick={() => void handleTapToFocus()}
+            role="button"
+            aria-label="タップでピントを合わせる"
         >
             <div id={elementId} className="absolute inset-0" />
 
-            {(isStarting || isRefocusing) && !startError && (
+            {isStarting && !startError && (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/80 pointer-events-none">
                     <Loader2 className="animate-spin text-teal-400" size={40} />
                     <p className="text-sm font-bold text-white/90">カメラを起動中...</p>
@@ -244,7 +260,10 @@ export const QrScanner = ({
                     <p className="text-xs text-white/70 whitespace-pre-wrap">{startError}</p>
                     <button
                         type="button"
-                        onClick={() => void refocus()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            void runStart();
+                        }}
                         className="rounded-full bg-teal-500 px-5 py-2 text-sm font-bold text-white"
                     >
                         再試行
@@ -252,14 +271,11 @@ export const QrScanner = ({
                 </div>
             )}
 
-            {showRefocusHint && !isStarting && !startError && (
+            {!isStarting && !startError && (
                 <div className="absolute bottom-4 left-0 right-0 z-20 flex flex-col items-center gap-2 pointer-events-none px-4">
                     <p className="text-xs font-bold text-white/90 bg-black/50 px-3 py-1.5 rounded-full text-center">
-                        ピントが合わないときは画面をタップ
+                        {isRefocusing ? 'ピント調整中…' : 'ピントが合わないときは画面をタップ'}
                     </p>
-                    {isRefocusing && (
-                        <p className="text-xs text-white/70">再調整中...</p>
-                    )}
                 </div>
             )}
         </div>

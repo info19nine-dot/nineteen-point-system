@@ -5,7 +5,7 @@ import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as Set
 import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay } from '../../components/features/card/FullScreenScanOverlay';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
-import { QR_CANVAS_SIZE, QR_CANVAS_STYLE } from '../../lib/qrDisplay';
+import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
 
 
@@ -812,7 +812,7 @@ const Dashboard = () => {
                                                 fgColor="#000000"
                                                 level={"H"}
                                                 includeMargin={true}
-                                                style={QR_CANVAS_STYLE}
+                                                style={QR_EARN_CANVAS_STYLE}
                                             />
                                         </div>
                                     </div>

@@ -35,7 +35,6 @@ export function FullScreenScanOverlay({
                     onScan={onScan}
                     onError={onError}
                     className="absolute inset-0"
-                    showRefocusHint
                 />
                 <p className="pointer-events-none absolute bottom-10 left-0 right-0 z-10 px-4 text-center text-sm font-bold text-white drop-shadow-md">
                     {hint}

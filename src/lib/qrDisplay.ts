@@ -1,10 +1,23 @@
-/** Shared QR render size — store earn & member use must match for scanning distance */
+/** High-res canvas — keep crisp when scaled down for display */
 export const QR_CANVAS_SIZE = 512;
-export const QR_DISPLAY_PX = 240;
 
-export const QR_CANVAS_STYLE = {
-    width: QR_DISPLAY_PX,
-    height: QR_DISPLAY_PX,
-    display: 'block' as const,
-    imageRendering: 'pixelated' as const,
-};
+/** Store earn QR on-screen size (CSS px) */
+export const QR_EARN_DISPLAY_PX = 240;
+
+/** Member use QR — same on-screen size as earn (no upscale) */
+export const QR_USE_DISPLAY_PX = 240;
+
+export function qrCanvasStyle(displayPx: number) {
+    return {
+        width: displayPx,
+        height: displayPx,
+        display: 'block' as const,
+        imageRendering: 'pixelated' as const,
+    };
+}
+
+export const QR_EARN_CANVAS_STYLE = qrCanvasStyle(QR_EARN_DISPLAY_PX);
+export const QR_USE_CANVAS_STYLE = qrCanvasStyle(QR_USE_DISPLAY_PX);
+
+/** @deprecated use QR_EARN_CANVAS_STYLE */
+export const QR_CANVAS_STYLE = QR_EARN_CANVAS_STYLE;

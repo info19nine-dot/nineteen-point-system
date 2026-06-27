@@ -12,19 +12,13 @@
   }
 }
 
-/* html5-qrcode — full-screen camera (let library size video; only fill container) */
+/* html5-qrcode — container only; do not override video sizing (causes false zoom) */
 .qr-scanner-host {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
   background: #000;
-}
-
-.qr-scanner-host video {
-  object-fit: cover !important;
-  width: 100% !important;
-  height: 100% !important;
 }
 
 .qr-scanner-host img {
