@@ -5,6 +5,7 @@ import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as Set
 import { QRCodeCanvas } from 'qrcode.react';
 import { QrScanner } from '../../components/features/card/QrScanner';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
+import { QR_CANVAS_SIZE, QR_CANVAS_STYLE } from '../../lib/qrDisplay';
 
 
 
@@ -803,21 +804,15 @@ const Dashboard = () => {
                                             ※このQRコードは1回のみ有効です。<br/>スクショ対策済み
                                         </div>
 
-                                        {/* QR Code — 512px描画→240px表示でくっきり */}
                                         <div className="bg-white p-3 rounded-xl inline-block shadow-lg relative group transition-all duration-300">
                                             <QRCodeCanvas 
                                                 value={earnQrPayload || 'NOT_SELECTED'} 
-                                                size={512}
+                                                size={QR_CANVAS_SIZE}
                                                 bgColor="#ffffff"
                                                 fgColor="#000000"
                                                 level={"H"}
                                                 includeMargin={true}
-                                                style={{
-                                                    width: 240,
-                                                    height: 240,
-                                                    display: 'block',
-                                                    imageRendering: 'pixelated',
-                                                }}
+                                                style={QR_CANVAS_STYLE}
                                             />
                                         </div>
                                     </div>
@@ -849,7 +844,6 @@ const Dashboard = () => {
                         onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
                         className="absolute inset-0"
                         showRefocusHint
-                        widePreview
                     />
                     <p className="absolute bottom-10 left-0 right-0 z-10 text-center text-sm font-bold text-white drop-shadow-md pointer-events-none px-4">
                         会員のQRコードを読み取ってください

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Scan, QrCode, ChevronLeft, X, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
 import { QRCodeCanvas } from 'qrcode.react';
 import { QrScanner } from '../../components/features/card/QrScanner';
+import { QR_CANVAS_SIZE, QR_CANVAS_STYLE } from '../../lib/qrDisplay';
 import { Skeleton } from '../../components/ui/skeleton';
 
 // 取引履歴の型定義
@@ -490,10 +491,9 @@ const CardHome = () => {
                       
                       <div className="relative w-full flex justify-center mb-6">
                           <div
-                              className={`bg-white p-4 rounded-2xl shadow-lg flex items-center justify-center ${
+                              className={`bg-white p-3 rounded-xl shadow-lg inline-block ${
                                   isSpecial ? 'ring-2 ring-yellow-500/40' : ''
                               } ${isQrConfirmed ? '' : 'opacity-20 blur-sm grayscale'}`}
-                              style={{ width: 280, height: 280 }}
                           >
                               {isQrConfirmed ? (
                                   <QRCodeCanvas
@@ -503,14 +503,20 @@ const CardHome = () => {
                                           type: 'USE',
                                           amount: Number(spendAmount),
                                       })}
-                                      size={248}
+                                      size={QR_CANVAS_SIZE}
                                       bgColor="#ffffff"
                                       fgColor="#000000"
                                       level="H"
-                                      includeMargin={false}
+                                      includeMargin={true}
+                                      style={QR_CANVAS_STYLE}
                                   />
                               ) : (
-                                  <QrCode size={200} className="text-gray-300" />
+                                  <div
+                                      className="flex items-center justify-center text-gray-300"
+                                      style={{ width: QR_CANVAS_STYLE.width, height: QR_CANVAS_STYLE.height }}
+                                  >
+                                      <QrCode size={200} />
+                                  </div>
                               )}
                           </div>
                           {!isQrConfirmed && (

@@ -8,8 +8,6 @@ type QrScannerProps = {
     className?: string;
     /** Shown when showRefocusHint — e.g. staff scanning member phone QR */
     showRefocusHint?: boolean;
-    /** Staff scans member phone screen — wider preview, larger scan box */
-    widePreview?: boolean;
 };
 
 type CameraStartConfig = string | { facingMode: string };
@@ -71,7 +69,6 @@ export const QrScanner = ({
     onError,
     className,
     showRefocusHint = false,
-    widePreview = false,
 }: QrScannerProps) => {
     const reactId = useId().replace(/:/g, '');
     const elementId = `qr-scanner-${reactId}`;
@@ -122,8 +119,7 @@ export const QrScanner = ({
                         fps: 10,
                         qrbox: (viewWidth, viewHeight) => {
                             const edge = Math.min(viewWidth, viewHeight);
-                            const ratio = widePreview ? 0.88 : 0.72;
-                            const size = Math.max(180, Math.floor(edge * ratio));
+                            const size = Math.max(180, Math.floor(edge * 0.72));
                             return { width: size, height: size };
                         },
                     },
@@ -146,7 +142,7 @@ export const QrScanner = ({
         throw lastError instanceof Error
             ? lastError
             : new Error('カメラを起動できません。ブラウザのカメラ許可を確認してください。');
-    }, [elementId, handleScan, widePreview]);
+    }, [elementId, handleScan]);
 
     const refocus = useCallback(async () => {
         if (isRefocusing) return;
@@ -199,7 +195,7 @@ export const QrScanner = ({
 
     return (
         <div
-            className={`qr-scanner-host${widePreview ? ' qr-scanner-host--wide' : ''} ${className ?? ''}`}
+            className={`qr-scanner-host ${className ?? ''}`}
             onClick={showRefocusHint ? refocus : undefined}
             role={showRefocusHint ? 'button' : undefined}
             aria-label={showRefocusHint ? 'タップでピントを再調整' : undefined}
