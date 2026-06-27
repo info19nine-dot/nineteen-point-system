@@ -5,6 +5,7 @@ import { useSupabase } from '../../contexts/SupabaseContext';
 import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { QrScanner } from '../../components/features/card/QrScanner';
+import { STAFF_LOGIN_PATH } from '../../lib/routes';
 
 
 
@@ -657,7 +658,7 @@ const Dashboard = () => {
       
         {/* Footer Actions */}
         <div className="text-center mt-8 pb-8">
-            <button onClick={() => logout().then(()=>navigate('/admin/login'))} className="flex items-center justify-center gap-2 mx-auto text-slate-400 hover:text-teal-600 text-sm font-medium transition-colors">
+            <button onClick={() => logout().then(()=>navigate(STAFF_LOGIN_PATH))} className="flex items-center justify-center gap-2 mx-auto text-slate-400 hover:text-teal-600 text-sm font-medium transition-colors">
                 <div className="p-2 bg-white rounded-full shadow-sm">
                     <Check size={16} className="text-slate-400" />
                 </div>

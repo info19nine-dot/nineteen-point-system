@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabase } from '../contexts/SupabaseContext';
+import { STAFF_LOGIN_PATH } from '../lib/routes';
 import { Loader2 } from 'lucide-react';
 
 export const AdminGuard = ({ children }: { children: React.ReactNode }) => {
@@ -12,7 +13,7 @@ export const AdminGuard = ({ children }: { children: React.ReactNode }) => {
         if (loading) return;
 
         if (!session) {
-            navigate('/admin/login');
+            navigate(STAFF_LOGIN_PATH);
             return;
         }
 

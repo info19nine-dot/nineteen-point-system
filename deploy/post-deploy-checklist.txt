@@ -2,7 +2,7 @@
 
 1. Open production URL — app loads without white screen
 2. Member login (e.g. freelovekobe@gmail.com) → /card
-3. Staff login at /admin/login (ID: n19 → n19@admin.com)
+3. Staff login at /portal/staff (share URL with staff only; /admin/login redirects to member login)
 4. Point balance visible on member card
 5. Transaction history loads
 6. Admin dashboard loads courses and member search

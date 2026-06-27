@@ -17,6 +17,7 @@ import SpecialMembership from './pages/member/SpecialMembership';
 import DesktopDashboard from './pages/admin/desktop/DesktopDashboard';
 import DesktopMemberDetail from './pages/admin/desktop/DesktopMemberDetail';
 import { AdminGuard } from './components/AdminGuard';
+import { STAFF_LOGIN_PATH } from './lib/routes';
 
 
 
@@ -33,8 +34,9 @@ function App() {
         <Route path="/auth/update-password" element={<UpdatePassword />} />
         <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
         
-        {/* Staff Portal */}
-        <Route path="/admin/login" element={<StaffLogin />} />
+        {/* Staff Portal — path not exposed on member screens */}
+        <Route path={STAFF_LOGIN_PATH} element={<StaffLogin />} />
+        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
         
         {/* Protected Routes (Guard logic is inside components for now) */}
         <Route path="/member" element={<CardHome />} />
