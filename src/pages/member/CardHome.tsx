@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Scan, QrCode, ChevronLeft, X, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
 import { QRCodeCanvas } from 'qrcode.react';
-import { QrScanner } from '../../components/features/card/QrScanner';
+import { FullScreenScanOverlay } from '../../components/features/card/FullScreenScanOverlay';
 import { QR_CANVAS_SIZE, QR_CANVAS_STYLE } from '../../lib/qrDisplay';
 import { Skeleton } from '../../components/ui/skeleton';
 
@@ -429,28 +429,16 @@ const CardHome = () => {
       )
   }
 
-  // Scan Logic (Member Camera)
   if (activeTab === 'scan') {
       return (
-          <div className="fixed inset-0 bg-black text-white flex flex-col z-50">
-              <div className="p-4 flex justify-between items-center bg-black/50 absolute top-0 w-full z-10">
-                  <button onClick={() => setActiveTab('home')} className="bg-white/20 p-2 rounded-full"><X size={20} /></button>
-                  <span className="font-bold drop-shadow-md">ポイント獲得</span>
-                  <div className="w-8"></div>
-              </div>
-              <div className="flex-1 relative min-h-0">
-                  <QrScanner
-                      onScan={handleScanResult}
-                      onError={(message) => setActiveModal({ type: 'error', title: 'カメラエラー', message })}
-                      className="absolute inset-0"
-                      showRefocusHint
-                  />
-                  <p className="absolute bottom-10 left-0 right-0 z-10 text-center text-sm font-bold text-white drop-shadow-md pointer-events-none">
-                      店舗のQRコードをスキャンしてください
-                  </p>
-              </div>
-          </div>
-      )
+          <FullScreenScanOverlay
+              title="ポイント獲得"
+              hint="店舗のQRコードをスキャンしてください"
+              onClose={() => setActiveTab('home')}
+              onScan={handleScanResult}
+              onError={(message) => setActiveModal({ type: 'error', title: 'カメラエラー', message })}
+          />
+      );
   }
 
   if (activeTab === 'code') {

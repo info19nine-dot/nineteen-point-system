@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { QrScanner } from '../../components/features/card/QrScanner';
+import { FullScreenScanOverlay } from '../../components/features/card/FullScreenScanOverlay';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -825,31 +825,14 @@ const Dashboard = () => {
             </div>
         )}
 
-        {/* Scan Modal (USE Points) — full screen for reliable camera on mobile */}
         {showScanModal && (
-            <div className="fixed inset-0 bg-black text-white flex flex-col z-50">
-                <div className="p-4 flex justify-between items-center bg-black/50 absolute top-0 w-full z-10">
-                    <button
-                        onClick={() => setShowScanModal(false)}
-                        className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
-                    >
-                        <X size={20} />
-                    </button>
-                    <span className="font-bold drop-shadow-md">ポイント消化</span>
-                    <div className="w-9" />
-                </div>
-                <div className="flex-1 relative min-h-0">
-                    <QrScanner
-                        onScan={handleScanResult}
-                        onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
-                        className="absolute inset-0"
-                        showRefocusHint
-                    />
-                    <p className="absolute bottom-10 left-0 right-0 z-10 text-center text-sm font-bold text-white drop-shadow-md pointer-events-none px-4">
-                        会員のQRコードを読み取ってください
-                    </p>
-                </div>
-            </div>
+            <FullScreenScanOverlay
+                title="ポイント消化"
+                hint="会員のQRコードを読み取ってください"
+                onClose={() => setShowScanModal(false)}
+                onScan={handleScanResult}
+                onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
+            />
         )}
 
         {/* Full History Overlay */}

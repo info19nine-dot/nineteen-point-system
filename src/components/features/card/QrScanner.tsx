@@ -12,6 +12,32 @@ type QrScannerProps = {
 
 type CameraStartConfig = string | { facingMode: string };
 
+function waitForScannerLayout(host: HTMLElement): Promise<void> {
+    return new Promise((resolve) => {
+        const ready = () => {
+            const { width, height } = host.getBoundingClientRect();
+            return width >= 200 && height >= 200;
+        };
+
+        if (ready()) {
+            resolve();
+            return;
+        }
+
+        const observer = new ResizeObserver(() => {
+            if (ready()) {
+                observer.disconnect();
+                resolve();
+            }
+        });
+        observer.observe(host);
+        setTimeout(() => {
+            observer.disconnect();
+            resolve();
+        }, 2000);
+    });
+}
+
 async function pickCameraConfigs(): Promise<CameraStartConfig[]> {
     const configs: CameraStartConfig[] = [];
 
@@ -76,6 +102,7 @@ export const QrScanner = ({
     const onErrorRef = useRef(onError);
     const lastScanRef = useRef<{ text: string; at: number } | null>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
+    const hostRef = useRef<HTMLDivElement>(null);
     const activeRef = useRef(true);
     const [isRefocusing, setIsRefocusing] = useState(false);
     const [isStarting, setIsStarting] = useState(true);
@@ -166,7 +193,10 @@ export const QrScanner = ({
         const init = async () => {
             setIsStarting(true);
             await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-            await new Promise((r) => setTimeout(r, 200));
+            if (hostRef.current) {
+                await waitForScannerLayout(hostRef.current);
+            }
+            await new Promise((r) => setTimeout(r, 100));
             if (!activeRef.current) return;
             try {
                 await startScanner();
@@ -195,6 +225,7 @@ export const QrScanner = ({
 
     return (
         <div
+            ref={hostRef}
             className={`qr-scanner-host ${className ?? ''}`}
             onClick={showRefocusHint ? refocus : undefined}
             role={showRefocusHint ? 'button' : undefined}
