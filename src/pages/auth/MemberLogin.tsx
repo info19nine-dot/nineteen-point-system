@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useSupabase } from '../../contexts/SupabaseContext';
+import { STAFF_LOGIN_PATH } from '../../lib/routes';
 import { User, Lock, Mail, AlertCircle, AlertTriangle, Info, ShieldX } from 'lucide-react';
 
 const MemberLogin = () => {
@@ -41,19 +42,30 @@ const MemberLogin = () => {
             setActiveModal({
                 type: 'info',
                 title: '自動ログインについて',
-                message: '一度ログインすると、次回からは\n自動的にログインされます。\n（毎回入力する必要はありません）'
+                message: '一度ログインすると、次回は自動的にログインされます。\n別のアカウントを使う場合は\n「別のアカウントでログイン」を選んでください。'
             });
             sessionStorage.setItem('has_seen_login_notice', 'true');
         }
     }, [location.state]);
 
-    // Redirect if already logged in
-    const { user, loading } = useSupabase();
+    // Redirect if already logged in as admin (e.g. old staff URL bookmark)
+    const { user, loading, profile, isAdmin, logout } = useSupabase();
     useEffect(() => {
-        if (!loading && user) {
-            navigate('/card');
+        if (!loading && user && isAdmin) {
+            navigate(STAFF_LOGIN_PATH, { replace: true });
         }
-    }, [user, loading, navigate]);
+    }, [user, loading, isAdmin, navigate]);
+
+    const handleSwitchAccount = async () => {
+        await logout();
+        setEmail('');
+        setPassword('');
+        setError(null);
+    };
+
+    const handleContinueAsCurrent = () => {
+        navigate('/card');
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,20 +86,26 @@ const MemberLogin = () => {
 
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (authUser) {
-                const { data: profile } = await supabase
+                const { data: profileData } = await supabase
                     .from('profiles')
-                    .select('is_deleted, is_blacklisted, rank')
+                    .select('is_deleted, is_blacklisted, rank, role')
                     .eq('id', authUser.id)
                     .single();
 
-                if (profile?.is_deleted || profile?.is_blacklisted) {
+                if (profileData?.role === 'admin') {
+                    navigate(STAFF_LOGIN_PATH, { replace: true });
+                    setIsLoading(false);
+                    return;
+                }
+
+                if (profileData?.is_deleted || profileData?.is_blacklisted) {
                     await supabase.auth.signOut();
                     // Show the styled modal
                     setActiveModal({
                         type: 'suspended',
                         title: '利用停止のお知らせ',
                         message: 'このアカウントは利用停止されています。\n管理者にお問い合わせください。',
-                        rank: profile.rank || 'regular'
+                        rank: profileData.rank || 'regular'
                     });
                     setIsLoading(false); // Stop loading manually since we don't navigate
                     return; 
@@ -115,6 +133,34 @@ const MemberLogin = () => {
                     <p className="text-slate-500 text-sm">貯まったポイントを確認・利用しましょう</p>
                 </div>
 
+                {loading && (
+                    <p className="text-center text-sm text-gray-400">読み込み中...</p>
+                )}
+
+                {!loading && user && profile && !isAdmin && (
+                    <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 space-y-3">
+                        <p className="text-sm text-teal-800 font-medium text-center">
+                            <span className="font-bold">{profile.name || profile.email}</span>
+                            {' '}としてログイン中です
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleContinueAsCurrent}
+                            className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition-colors"
+                        >
+                            このアカウントで続ける
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSwitchAccount}
+                            className="w-full text-sm text-teal-700 font-bold py-2 hover:underline"
+                        >
+                            別のアカウントでログイン
+                        </button>
+                    </div>
+                )}
+
+                {!loading && !(user && profile && !isAdmin) && (
                 <form onSubmit={handleLogin} className="space-y-6">
                     {/* Error Message */}
                     {error && (
@@ -160,6 +206,7 @@ const MemberLogin = () => {
                         {isLoading ? 'ログイン中...' : 'ログインする'}
                     </button>
                 </form>
+                )}
 
                 <div className="text-center pt-2">
                      <p className="text-sm text-gray-500">

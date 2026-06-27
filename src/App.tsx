@@ -18,6 +18,7 @@ import DesktopDashboard from './pages/admin/desktop/DesktopDashboard';
 import DesktopMemberDetail from './pages/admin/desktop/DesktopMemberDetail';
 import { AdminGuard } from './components/AdminGuard';
 import { STAFF_LOGIN_PATH } from './lib/routes';
+import NotFound from './pages/NotFound';
 
 
 
@@ -36,7 +37,7 @@ function App() {
         
         {/* Staff Portal — path not exposed on member screens */}
         <Route path={STAFF_LOGIN_PATH} element={<StaffLogin />} />
-        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+        <Route path="/admin/login" element={<NotFound />} />
         
         {/* Protected Routes (Guard logic is inside components for now) */}
         <Route path="/member" element={<CardHome />} />
