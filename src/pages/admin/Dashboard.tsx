@@ -875,6 +875,7 @@ const Dashboard = () => {
                             onScan={handleScanResult}
                             onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
                             className="absolute inset-0"
+                            showRefocusHint
                         />
                     </div>
                 </div>

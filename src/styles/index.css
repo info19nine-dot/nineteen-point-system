@@ -21,6 +21,11 @@
   background: #000;
 }
 
+.qr-scanner-host > div:first-child {
+  position: absolute;
+  inset: 0;
+}
+
 .qr-scanner-host video {
   object-fit: cover !important;
   width: 100% !important;

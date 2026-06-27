@@ -442,6 +442,7 @@ const CardHome = () => {
                       onScan={handleScanResult}
                       onError={(message) => setActiveModal({ type: 'error', title: 'カメラエラー', message })}
                       className="absolute inset-0"
+                      showRefocusHint
                   />
                   <p className="absolute bottom-10 left-0 right-0 z-10 text-center text-sm font-bold text-white drop-shadow-md pointer-events-none">
                       店舗のQRコードをスキャンしてください
@@ -502,14 +503,14 @@ const CardHome = () => {
                                    level={"H"}
                                    includeMargin={true}
                                    style={{
-                                       width: 240,
-                                       height: 240,
+                                       width: 280,
+                                       height: 280,
                                        display: 'block',
                                        imageRendering: 'pixelated',
                                    }}
                                />
                            ) : (
-                               <QrCode size={240} className="text-gray-300" />
+                               <QrCode size={280} className="text-gray-300" />
                            )}
                            
                            {!isQrConfirmed && (
@@ -520,7 +521,7 @@ const CardHome = () => {
                       </div>
 
                       <p className={`text-xs transition-colors ${isQrConfirmed ? (isSpecial ? 'text-yellow-500 font-bold' : 'text-teal-600 font-bold') : (isSpecial ? 'text-gray-500' : 'text-slate-400')}`}>
-                          {isQrConfirmed ? 'スタッフに提示してください' : '金額を入力して確定してください'}
+                          {isQrConfirmed ? 'スタッフに提示してください（画面を明るく）' : '金額を入力して確定してください'}
                       </p>
                   </div>
                   
