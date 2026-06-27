@@ -743,7 +743,7 @@ const DesktopDashboard = () => {
         <div className="h-screen bg-slate-100 font-sans text-slate-800 flex flex-col overflow-hidden">
             
             {/* Desktop Header */}
-            <header className="bg-slate-800 text-white shadow-md z-10 sticky top-0 flex-shrink-0">
+            <header className="bg-slate-800 text-white shadow-md z-30 sticky top-0 flex-shrink-0">
                 <div className="max-w-5xl mx-auto px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-8">
                         <div className="flex items-center gap-4">
@@ -796,7 +796,7 @@ const DesktopDashboard = () => {
                                 <Home size={20} />
                             </button>
 
-                            <div className="relative">
+                            <div className="relative z-50">
                                 <button 
                                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                                     className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${
