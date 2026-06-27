@@ -49,7 +49,7 @@ const StaffLogin = () => {
         setError(null);
 
         try {
-            // Staff ID login: append dummy domain (e.g. "n19" -> "n19@admin.com")
+            // Staff ID login: append dummy domain (loginId -> loginId@admin.com)
             const email = `${loginId}@admin.com`;
 
             const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -165,7 +165,7 @@ const StaffLogin = () => {
                                 <label className="text-xs font-bold text-slate-400 ml-1 mb-1 block">管理者ID</label>
                                 <input 
                                     type="text" 
-                                    placeholder="n19" 
+                                    placeholder="管理者IDを入力" 
                                     className="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-600 text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors font-mono"
                                     value={loginId}
                                     onChange={(e) => setLoginId(e.target.value)}
