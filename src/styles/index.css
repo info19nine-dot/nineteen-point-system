@@ -36,6 +36,16 @@
   display: block !important;
 }
 
+/* Staff USE flow — scan member phone at normal distance */
+.qr-scanner-host--wide .qr-scanner-viewport video {
+  object-fit: contain !important;
+}
+
+.qr-scanner-host--wide .qr-scanner-viewport > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .qr-scanner-host img {
   display: none !important;
 }

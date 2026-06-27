@@ -843,12 +843,13 @@ const Dashboard = () => {
                     <span className="font-bold drop-shadow-md">ポイント消化</span>
                     <div className="w-9" />
                 </div>
-                <div className="flex-1 relative min-h-0 pt-14">
+                <div className="flex-1 relative min-h-0">
                     <QrScanner
                         onScan={handleScanResult}
                         onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
                         className="absolute inset-0"
                         showRefocusHint
+                        widePreview
                     />
                     <p className="absolute bottom-10 left-0 right-0 z-10 text-center text-sm font-bold text-white drop-shadow-md pointer-events-none px-4">
                         会員のQRコードを読み取ってください

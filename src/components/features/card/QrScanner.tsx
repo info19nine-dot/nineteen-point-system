@@ -8,6 +8,8 @@ type QrScannerProps = {
     className?: string;
     /** Shown when showRefocusHint — e.g. staff scanning member phone QR */
     showRefocusHint?: boolean;
+    /** Staff scans member phone screen — wider preview, larger scan box */
+    widePreview?: boolean;
 };
 
 type CameraStartConfig = string | { facingMode: string };
@@ -56,10 +58,6 @@ async function enhanceVideoTrack(elementId: string) {
             advanced.push({ focusMode: 'single-shot' });
         }
 
-        if (caps?.zoom && typeof caps.zoom.min === 'number') {
-            advanced.push({ zoom: caps.zoom.min });
-        }
-
         if (advanced.length > 0) {
             await track.applyConstraints({ advanced } as MediaTrackConstraints);
         }
@@ -73,6 +71,7 @@ export const QrScanner = ({
     onError,
     className,
     showRefocusHint = false,
+    widePreview = false,
 }: QrScannerProps) => {
     const reactId = useId().replace(/:/g, '');
     const elementId = `qr-scanner-${reactId}`;
@@ -123,7 +122,8 @@ export const QrScanner = ({
                         fps: 10,
                         qrbox: (viewWidth, viewHeight) => {
                             const edge = Math.min(viewWidth, viewHeight);
-                            const size = Math.max(180, Math.floor(edge * 0.72));
+                            const ratio = widePreview ? 0.88 : 0.72;
+                            const size = Math.max(180, Math.floor(edge * ratio));
                             return { width: size, height: size };
                         },
                     },
@@ -146,7 +146,7 @@ export const QrScanner = ({
         throw lastError instanceof Error
             ? lastError
             : new Error('カメラを起動できません。ブラウザのカメラ許可を確認してください。');
-    }, [elementId, handleScan]);
+    }, [elementId, handleScan, widePreview]);
 
     const refocus = useCallback(async () => {
         if (isRefocusing) return;
@@ -199,7 +199,7 @@ export const QrScanner = ({
 
     return (
         <div
-            className={`qr-scanner-host ${className ?? ''}`}
+            className={`qr-scanner-host${widePreview ? ' qr-scanner-host--wide' : ''} ${className ?? ''}`}
             onClick={showRefocusHint ? refocus : undefined}
             role={showRefocusHint ? 'button' : undefined}
             aria-label={showRefocusHint ? 'タップでピントを再調整' : undefined}
