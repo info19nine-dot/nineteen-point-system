@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { Scan, QrCode, ChevronLeft, X, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
+import { Scan, QrCode, ChevronLeft, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
 import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay } from '../../components/features/card/FullScreenScanOverlay';
 import { QR_CANVAS_SIZE, QR_CANVAS_STYLE } from '../../lib/qrDisplay';
