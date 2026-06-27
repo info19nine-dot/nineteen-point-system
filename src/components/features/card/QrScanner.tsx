@@ -12,22 +12,35 @@ export const QrScanner = ({ onScan, onError, className }: QrScannerProps) => {
     const elementId = `qr-scanner-${reactId}`;
     const onScanRef = useRef(onScan);
     const onErrorRef = useRef(onError);
+    const lastScanRef = useRef<{ text: string; at: number } | null>(null);
     onScanRef.current = onScan;
     onErrorRef.current = onError;
 
     useEffect(() => {
-        const scanner = new Html5Qrcode(elementId);
+        const scanner = new Html5Qrcode(elementId, { verbose: false });
         let active = true;
 
+        const handleScan = (decoded: string) => {
+            const now = Date.now();
+            const last = lastScanRef.current;
+            if (last && last.text === decoded && now - last.at < 3000) return;
+            lastScanRef.current = { text: decoded, at: now };
+            onScanRef.current(decoded);
+        };
+
         const start = async () => {
-            await new Promise((r) => setTimeout(r, 400));
+            await new Promise((r) => setTimeout(r, 300));
             if (!active) return;
 
             try {
                 await scanner.start(
                     { facingMode: 'environment' },
-                    { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1 },
-                    (decoded) => onScanRef.current(decoded),
+                    {
+                        fps: 10,
+                        // Full viewfinder scan — avoids double box with custom overlays
+                        qrbox: undefined,
+                    },
+                    handleScan,
                     () => {}
                 );
             } catch (e: unknown) {
@@ -40,15 +53,14 @@ export const QrScanner = ({ onScan, onError, className }: QrScannerProps) => {
 
         return () => {
             active = false;
-            scanner.stop().catch(() => {});
+            scanner.stop().then(() => scanner.clear()).catch(() => {});
         };
     }, [elementId]);
 
     return (
         <div
             id={elementId}
-            className={className ?? 'w-full h-full'}
-            style={{ minHeight: '100%' }}
+            className={`qr-scanner-host ${className ?? ''}`}
         />
     );
 };

@@ -437,23 +437,15 @@ const CardHome = () => {
                   <span className="font-bold drop-shadow-md">ポイント獲得</span>
                   <div className="w-8"></div>
               </div>
-              <div className="flex-grow flex flex-col items-center justify-center relative bg-black">
-                  <div className="w-full h-full relative">
-                      <QrScanner
-                          onScan={handleScanResult}
-                          onError={(message) => setActiveModal({ type: 'error', title: 'カメラエラー', message })}
-                          className="w-full h-full"
-                      />
-                      {/* Overlay */}
-                      <div className="absolute inset-0 border-[40px] border-black/50 flex items-center justify-center pointer-events-none">
-                          <div className={`w-64 h-64 border-4 rounded-xl relative ${isSpecial ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.5)]' : 'border-teal-400'}`}>
-                              <div className="absolute inset-0 border-[2px] border-white/20 animate-pulse"></div>
-                              <div className={`w-full h-0.5 absolute top-1/2 animate-ping ${isSpecial ? 'bg-yellow-200' : 'bg-red-500'}`}></div>
-                          </div>
-                      </div>
-                  </div>
-                  <p className="absolute bottom-10 z-10 text-sm font-bold bg-black/50 px-4 py-2 rounded-full">店舗のQRコードをスキャンしてください</p>
-                  
+              <div className="flex-1 relative min-h-0">
+                  <QrScanner
+                      onScan={handleScanResult}
+                      onError={(message) => setActiveModal({ type: 'error', title: 'カメラエラー', message })}
+                      className="absolute inset-0"
+                  />
+                  <p className="absolute bottom-10 left-0 right-0 z-10 text-center text-sm font-bold text-white drop-shadow-md pointer-events-none">
+                      店舗のQRコードをスキャンしてください
+                  </p>
               </div>
           </div>
       )

@@ -870,23 +870,12 @@ const Dashboard = () => {
                         <p className="text-slate-400 text-xs mt-1 relative z-10">会員のQRコードを読み取ってください</p>
                     </div>
 
-                    <div className="relative flex-grow bg-black flex flex-col items-center justify-center overflow-hidden">
-                        {/* Camera View */}
-                        <div className="w-full h-full relative">
-                            <QrScanner
-                                onScan={handleScanResult}
-                                onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
-                                className="w-full h-full"
-                            /> 
-                            
-                            {/* Overlay Frame */}
-                            <div className="absolute inset-0 border-[40px] border-black/50 flex items-center justify-center pointer-events-none">
-                                <div className="w-64 h-64 border-4 border-teal-500/80 rounded-xl relative">
-                                    <div className="absolute inset-0 border-[2px] border-white/20 animate-pulse"></div>
-                                    <div className="w-full h-0.5 bg-red-500/80 absolute top-1/2 animate-ping"></div>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="relative flex-1 min-h-0 bg-black overflow-hidden">
+                        <QrScanner
+                            onScan={handleScanResult}
+                            onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
+                            className="absolute inset-0"
+                        />
                     </div>
                 </div>
             </div>
