@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { Loader2 } from 'lucide-react';
 
 type QrScannerProps = {
     onScan: (text: string) => void;
@@ -81,6 +82,7 @@ export const QrScanner = ({
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const activeRef = useRef(true);
     const [isRefocusing, setIsRefocusing] = useState(false);
+    const [isStarting, setIsStarting] = useState(true);
 
     onScanRef.current = onScan;
     onErrorRef.current = onError;
@@ -121,10 +123,9 @@ export const QrScanner = ({
                         fps: 10,
                         qrbox: (viewWidth, viewHeight) => {
                             const edge = Math.min(viewWidth, viewHeight);
-                            const size = Math.floor(edge * 0.72);
+                            const size = Math.max(180, Math.floor(edge * 0.72));
                             return { width: size, height: size };
                         },
-                        aspectRatio: 1.777778,
                     },
                     handleScan,
                     () => {}
@@ -150,9 +151,12 @@ export const QrScanner = ({
     const refocus = useCallback(async () => {
         if (isRefocusing) return;
         setIsRefocusing(true);
+        setIsStarting(true);
         try {
             await startScanner();
+            setIsStarting(false);
         } catch (e: unknown) {
+            setIsStarting(false);
             const message = e instanceof Error ? e.message : 'カメラを再起動できません';
             onErrorRef.current?.(message);
         } finally {
@@ -164,12 +168,15 @@ export const QrScanner = ({
         activeRef.current = true;
 
         const init = async () => {
+            setIsStarting(true);
             await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
             await new Promise((r) => setTimeout(r, 200));
             if (!activeRef.current) return;
             try {
                 await startScanner();
+                setIsStarting(false);
             } catch (e: unknown) {
+                setIsStarting(false);
                 const message = e instanceof Error ? e.message : 'カメラを起動できません';
                 onErrorRef.current?.(message);
             }
@@ -199,7 +206,14 @@ export const QrScanner = ({
         >
             <div id={elementId} className="qr-scanner-viewport" />
 
-            {showRefocusHint && (
+            {(isStarting || isRefocusing) && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/80 pointer-events-none">
+                    <Loader2 className="animate-spin text-teal-400" size={40} />
+                    <p className="text-sm font-bold text-white/90">カメラを起動中...</p>
+                </div>
+            )}
+
+            {showRefocusHint && !isStarting && (
                 <div className="absolute bottom-4 left-0 right-0 z-20 flex flex-col items-center gap-2 pointer-events-none px-4">
                     <p className="text-xs font-bold text-white/90 bg-black/50 px-3 py-1.5 rounded-full text-center">
                         ピントが合わないときは画面をタップ

@@ -216,31 +216,20 @@ const Dashboard = () => {
 
                 // --- HANDLE EARN ---
                 if (type === 'EARN') {
-                    // Update Profile (Add Points)
-                    const { error: updateError } = await supabase
-                        .from('profiles')
-                        .update({ points: member.points + amount })
-                        .eq('id', memberId);
+                    const { error: rpcError } = await supabase.rpc('execute_point_transaction', {
+                        p_amount: amount,
+                        p_description: data.description || 'Course QR: ' + (data.courseName || 'Store Scan'),
+                        p_type: 'EARN',
+                        p_target_member_id: memberId,
+                        p_qr_id: data.qrId || null,
+                        p_served_by: data.servedBy || null,
+                    });
 
-                    if (updateError) throw updateError;
+                    if (rpcError) throw rpcError;
 
-                    // Insert Transaction
-                    const { error: txInsertError } = await supabase
-                        .from('transactions')
-                        .insert({
-                            member_id: memberId,
-                            type: 'EARN',
-                            amount: amount,
-                            served_by: data.servedBy || null, 
-                            description: data.description || 'Course QR: ' + (data.courseName || 'Store Scan')
-                        });
-
-                    if (txInsertError) throw txInsertError;
-
-                    // Success
                     setSuccessType('EARN');
                     setShowScanSuccess(true);
-                    fetchData(); // Refresh history
+                    fetchData();
                     setTimeout(() => {
                         setShowScanSuccess(false);
                         setScanResultData(null);
@@ -255,28 +244,17 @@ const Dashboard = () => {
                     return;
                 }
 
-                // 2. Insert Transaction
-                const { error: txInsertError } = await supabase
-                    .from('transactions')
-                    .insert({
-                        member_id: memberId,
-                        type: 'USE',
-                        amount: amount,
-                        description: 'ポイント利用'
-                    });
-                
-                if (txInsertError) throw txInsertError;
+                // 2. Execute via RPC (trigger updates points)
+                const { error: rpcError } = await supabase.rpc('execute_point_transaction', {
+                    p_amount: amount,
+                    p_description: 'ポイント利用',
+                    p_type: 'USE',
+                    p_target_member_id: memberId,
+                });
 
-                // 3. Update Profile
-                const { error: updateError } = await supabase
-                    .from('profiles')
-                    .update({ points: member.points - amount })
-                    .eq('id', memberId);
+                if (rpcError) throw rpcError;
 
-                if (updateError) throw updateError;
-
-                // Success
-                setSuccessType('USE'); // Set Type
+                setSuccessType('USE');
                 setShowScanSuccess(true);
                 fetchData(); // Refresh history
                 
@@ -852,30 +830,29 @@ const Dashboard = () => {
             </div>
         )}
 
-        {/* Scan Modal (USE Points) - Real Implementation */}
+        {/* Scan Modal (USE Points) — full screen for reliable camera on mobile */}
         {showScanModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-                <div className="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden relative shadow-2xl flex flex-col h-[70vh]">
-                    <button onClick={() => setShowScanModal(false)} className="absolute top-4 right-4 z-20 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors">
+            <div className="fixed inset-0 bg-black text-white flex flex-col z-50">
+                <div className="p-4 flex justify-between items-center bg-black/50 absolute top-0 w-full z-10">
+                    <button
+                        onClick={() => setShowScanModal(false)}
+                        className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+                    >
                         <X size={20} />
                     </button>
-                    
-                    <div className="bg-slate-900 text-white p-6 text-center relative overflow-hidden shrink-0">
-                        <div className="absolute top-[-50px] left-[-50px] w-32 h-32 bg-teal-500/30 rounded-full blur-2xl"></div>
-                        <h2 className="text-xl font-bold relative z-10 flex items-center justify-center gap-2">
-                            <Scan size={20} /> ポイント消化
-                        </h2>
-                        <p className="text-slate-400 text-xs mt-1 relative z-10">会員のQRコードを読み取ってください</p>
-                    </div>
-
-                    <div className="relative flex-1 min-h-[280px] bg-black overflow-hidden">
-                        <QrScanner
-                            onScan={handleScanResult}
-                            onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
-                            className="absolute inset-0"
-                            showRefocusHint
-                        />
-                    </div>
+                    <span className="font-bold drop-shadow-md">ポイント消化</span>
+                    <div className="w-9" />
+                </div>
+                <div className="flex-1 relative min-h-0 pt-14">
+                    <QrScanner
+                        onScan={handleScanResult}
+                        onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
+                        className="absolute inset-0"
+                        showRefocusHint
+                    />
+                    <p className="absolute bottom-10 left-0 right-0 z-10 text-center text-sm font-bold text-white drop-shadow-md pointer-events-none px-4">
+                        会員のQRコードを読み取ってください
+                    </p>
                 </div>
             </div>
         )}
