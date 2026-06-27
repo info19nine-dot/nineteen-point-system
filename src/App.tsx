@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MemberLogin from './pages/auth/MemberLogin';
 import StaffLogin from './pages/auth/StaffLogin';
+import StaffModeSelect from './pages/auth/StaffModeSelect';
 import Register from './pages/auth/Register';
 
 import PasswordReset from './pages/auth/PasswordReset';
@@ -17,7 +18,7 @@ import SpecialMembership from './pages/member/SpecialMembership';
 import DesktopDashboard from './pages/admin/desktop/DesktopDashboard';
 import DesktopMemberDetail from './pages/admin/desktop/DesktopMemberDetail';
 import { AdminGuard } from './components/AdminGuard';
-import { STAFF_LOGIN_PATH } from './lib/routes';
+import { STAFF_LOGIN_PATH, STAFF_MODE_SELECT_PATH } from './lib/routes';
 import NotFound from './pages/NotFound';
 
 
@@ -36,6 +37,7 @@ function App() {
         <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
         
         {/* Staff Portal — path not exposed on member screens */}
+        <Route path={STAFF_MODE_SELECT_PATH} element={<AdminGuard><StaffModeSelect /></AdminGuard>} />
         <Route path={STAFF_LOGIN_PATH} element={<StaffLogin />} />
         <Route path="/admin/login" element={<NotFound />} />
         

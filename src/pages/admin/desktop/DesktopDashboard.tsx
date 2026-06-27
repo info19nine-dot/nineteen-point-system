@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../lib/supabaseClient';
-import { AlertTriangle, ChevronRight, Filter, ChevronDown, ChevronUp, FileText, ArrowLeft, ArrowRight, Calendar, X, User, FileSpreadsheet, Download, Loader2, ShieldCheck, Clock, Ban, CheckCircle2, Database, Info, Home, Search, Menu } from 'lucide-react';
+import { STAFF_MODE_SELECT_PATH } from '../../../lib/routes';
+import { AlertTriangle, ChevronRight, Filter, ChevronDown, ChevronUp, FileText, ArrowLeft, ArrowRight, Calendar, X, User, FileSpreadsheet, Download, Loader2, ShieldCheck, Clock, Ban, CheckCircle2, Database, Info, Home, Search, Menu, LayoutGrid } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/skeleton';
 
 type SortKey = 'points' | 'lastVisit' | 'name' | 'email';
@@ -787,8 +788,6 @@ const DesktopDashboard = () => {
                         </div>
                         
                         <div className="flex items-center gap-2">
-                            {/* Home Button (Return to Mode Select) */}
-                            {/* Home Button (Current Page) */}
                             <button 
                                 onClick={() => navigate('/admin/office')} 
                                 className="w-10 h-10 flex items-center justify-center text-slate-300 hover:bg-slate-700 hover:text-white rounded-full transition-all"
@@ -797,7 +796,6 @@ const DesktopDashboard = () => {
                                 <Home size={20} />
                             </button>
 
-                            {/* Settings Dropdown */}
                             <div className="relative">
                                 <button 
                                     onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -806,16 +804,29 @@ const DesktopDashboard = () => {
                                         ? 'bg-slate-700 text-white shadow-inner' 
                                         : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                                     }`}
+                                    title="メニュー"
                                 >
                                     {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
                                 </button>
 
-                                {/* Dropdown Menu */}
                                 {isMenuOpen && (
                                     <div className="absolute right-0 top-12 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                                         <div className="px-4 py-3 border-b border-gray-100 mb-1">
                                             <p className="text-xs text-gray-400 font-medium">メニュー</p>
                                         </div>
+
+                                        <button
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                navigate(STAFF_MODE_SELECT_PATH);
+                                            }}
+                                            className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-teal-600 flex items-center gap-3 transition-colors"
+                                        >
+                                            <div className="p-1.5 bg-slate-100 rounded text-slate-500">
+                                                <LayoutGrid size={16} />
+                                            </div>
+                                            モード選択
+                                        </button>
                                         
                                         <button 
                                             onClick={() => {
@@ -829,8 +840,6 @@ const DesktopDashboard = () => {
                                             </div>
                                             管理者昇格
                                         </button>
-                                        
-
                                     </div>
                                 )}
                             </div>
@@ -1271,6 +1280,7 @@ const DesktopDashboard = () => {
                 </div>
             )}
         </main>
+
                         {/* Modals */}
             {activeModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in">

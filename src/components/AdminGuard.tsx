@@ -1,29 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { STAFF_LOGIN_PATH } from '../lib/routes';
 import { Loader2 } from 'lucide-react';
 
 export const AdminGuard = ({ children }: { children: React.ReactNode }) => {
-    const { session, loading, isAdmin } = useSupabase();
+    const { session, loading, isAdmin, profile, refreshProfile } = useSupabase();
     const navigate = useNavigate();
     const [isAuthorized, setIsAuthorized] = useState(false);
+    const fetchingProfile = useRef(false);
 
     useEffect(() => {
         if (loading) return;
 
         if (!session) {
+            setIsAuthorized(false);
             navigate(STAFF_LOGIN_PATH);
             return;
         }
 
-        // Use the context's computed isAdmin property
+        if (!profile) {
+            setIsAuthorized(false);
+            if (!fetchingProfile.current) {
+                fetchingProfile.current = true;
+                refreshProfile().finally(() => {
+                    fetchingProfile.current = false;
+                });
+            }
+            return;
+        }
+
         if (isAdmin) {
             setIsAuthorized(true);
         } else {
-            navigate('/card');
+            setIsAuthorized(false);
+            navigate('/card', { replace: true });
         }
-    }, [session, loading, isAdmin, navigate]);
+    }, [session, loading, isAdmin, profile, navigate, refreshProfile]);
 
     if (loading || !isAuthorized) {
         return (

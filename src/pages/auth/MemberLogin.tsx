@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useSupabase } from '../../contexts/SupabaseContext';
-import { STAFF_LOGIN_PATH } from '../../lib/routes';
-import { User, Lock, Mail, AlertCircle, AlertTriangle, Info, ShieldX } from 'lucide-react';
+import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
+import { User, Lock, Mail, AlertCircle, AlertTriangle, Info, ShieldX, ShieldCheck } from 'lucide-react';
 
 const MemberLogin = () => {
     const [email, setEmail] = useState('');
@@ -19,6 +19,8 @@ const MemberLogin = () => {
         rank?: 'regular' | 'special';
     } | null>(null);
 
+    const { user, loading, profile, isAdmin, logout } = useSupabase();
+
     // Check for Suspension State from Redirect
     useEffect(() => {
         if (location.state?.suspended) {
@@ -33,9 +35,10 @@ const MemberLogin = () => {
         }
     }, [location]);
 
-    // Show Auto-Login Notice on Mount (only if no suspension)
+    // Show Auto-Login Notice on Mount (only if no suspension, not staff)
     useEffect(() => {
-        if (location.state?.suspended) return;
+        if (location.state?.suspended || loading) return;
+        if (user && isAdmin) return;
 
         const hasSeenNotice = sessionStorage.getItem('has_seen_login_notice');
         if (!hasSeenNotice) {
@@ -46,21 +49,17 @@ const MemberLogin = () => {
             });
             sessionStorage.setItem('has_seen_login_notice', 'true');
         }
-    }, [location.state]);
-
-    // Redirect if already logged in as admin (e.g. old staff URL bookmark)
-    const { user, loading, profile, isAdmin, logout } = useSupabase();
-    useEffect(() => {
-        if (!loading && user && isAdmin) {
-            navigate(STAFF_LOGIN_PATH, { replace: true });
-        }
-    }, [user, loading, isAdmin, navigate]);
+    }, [location.state, loading, user, isAdmin]);
 
     const handleSwitchAccount = async () => {
         await logout();
         setEmail('');
         setPassword('');
         setError(null);
+    };
+
+    const handleGoToStaffPortal = () => {
+        navigate(STAFF_MODE_SELECT_PATH);
     };
 
     const handleContinueAsCurrent = () => {
@@ -93,7 +92,6 @@ const MemberLogin = () => {
                     .single();
 
                 if (profileData?.role === 'admin') {
-                    navigate(STAFF_LOGIN_PATH, { replace: true });
                     setIsLoading(false);
                     return;
                 }
@@ -137,6 +135,34 @@ const MemberLogin = () => {
                     <p className="text-center text-sm text-gray-400">読み込み中...</p>
                 )}
 
+                {!loading && user && profile && isAdmin && (
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+                        <div className="flex items-center justify-center gap-2 text-teal-400">
+                            <ShieldCheck size={20} />
+                            <span className="text-sm font-bold">スタッフとしてログイン中</span>
+                        </div>
+                        <p className="text-sm text-slate-300 text-center leading-relaxed">
+                            会員画面はスタッフアカウントでは利用できません。
+                            <br />
+                            テスト用の会員アカウントで見る場合は、一度ログアウトしてください。
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleGoToStaffPortal}
+                            className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-500 transition-colors"
+                        >
+                            スタッフ画面へ戻る
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSwitchAccount}
+                            className="w-full text-sm text-slate-400 font-bold py-2 hover:text-white transition-colors"
+                        >
+                            ログアウトして会員ログイン
+                        </button>
+                    </div>
+                )}
+
                 {!loading && user && profile && !isAdmin && (
                     <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 space-y-3">
                         <p className="text-sm text-teal-800 font-medium text-center">
@@ -160,7 +186,7 @@ const MemberLogin = () => {
                     </div>
                 )}
 
-                {!loading && !(user && profile && !isAdmin) && (
+                {!loading && !(user && profile) && (
                 <form onSubmit={handleLogin} className="space-y-6">
                     {/* Error Message */}
                     {error && (

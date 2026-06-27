@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
@@ -27,7 +27,8 @@ type SupabaseContextType = {
   profile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
-  logout: () => Promise<void>;
+  logout: (options?: { redirectTo?: string | null }) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -38,6 +39,47 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+      } else if (data) {
+        if (data.is_blacklisted || data.is_deleted) {
+          await supabase.auth.signOut();
+          navigate('/login', {
+            replace: true,
+            state: {
+              suspended: true,
+              rank: data.rank,
+            },
+          });
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          return;
+        }
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
+
+  const refreshProfile = useCallback(async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (currentSession?.user) {
+      await fetchProfile(currentSession.user.id);
+    }
+  }, [fetchProfile]);
 
   // Initialize & Listen for Auth Changes
   useEffect(() => {
@@ -63,7 +105,7 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchProfile]);
 
   // Realtime Profile Updates
   useEffect(() => {
@@ -110,53 +152,16 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, navigate]); // Add navigate dependency
+  }, [user?.id, navigate]);
 
-  // Fetch Role/Points from 'profiles' table
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
-        if (data) {
-          // Check for suspension (Force Logout on Load)
-          if (data.is_blacklisted || data.is_deleted) {
-              await supabase.auth.signOut();
-              // Redirect with State
-              navigate('/login', { 
-                replace: true, 
-                state: { 
-                  suspended: true, 
-                  rank: data.rank 
-                } 
-              });
-              setSession(null);
-              setUser(null);
-              setProfile(null);
-              return;
-          }
-          setProfile(data);
-        }
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = async () => {
+  const logout = async (options?: { redirectTo?: string | null }) => {
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
     setProfile(null);
-    navigate('/login');
+    if (options?.redirectTo !== null) {
+      navigate(options?.redirectTo ?? '/login');
+    }
   };
 
   const value = {
@@ -164,8 +169,9 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
     user,
     profile,
     loading,
-    isAdmin: profile?.role === 'admin' || profile?.email === 'n19@admin.com',
+    isAdmin: profile?.role === 'admin',
     logout,
+    refreshProfile,
   };
 
   return (
