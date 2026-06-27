@@ -161,11 +161,16 @@ const MemberLogin = () => {
                     </button>
                 </form>
 
-                <div className="text-center pt-2">
+                <div className="text-center pt-2 space-y-3">
                      <p className="text-sm text-gray-500">
                         アカウントをお持ちでない方は{' '}
                         <Link to="/register" className="text-teal-600 font-bold hover:underline">
                             新規会員登録
+                        </Link>
+                    </p>
+                    <p className="text-xs text-gray-400">
+                        <Link to="/admin/login" className="hover:text-teal-600 hover:underline">
+                            スタッフの方はこちら
                         </Link>
                     </p>
                 </div>
