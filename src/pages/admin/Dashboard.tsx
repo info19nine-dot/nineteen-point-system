@@ -674,7 +674,7 @@ const Dashboard = () => {
         {/* QR Code Modal (EARN Points) - Real Implementation */}
         {showQrModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-                <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 relative shadow-2xl text-center">
+                <div className="bg-white rounded-[2rem] w-full max-w-sm max-h-[92vh] overflow-y-auto p-6 pb-8 relative shadow-2xl text-center">
                     <button onClick={handleCloseQrModal} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
                         <X size={24} />
                     </button>
@@ -719,8 +719,8 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* MAIN CONTENT AREA: Wrapper for Stability (Prevents Layout Shift) */}
-                    <div className="h-[480px] flex flex-col">
+                    {/* MAIN CONTENT AREA */}
+                    <div className="flex flex-col">
                         
                         {/* MODE A: Manual Input Form (Takes full height key to replace CastName+QR) */}
                         {isManualMode && !isConfirmed ? (
@@ -832,15 +832,21 @@ const Dashboard = () => {
                                             ※このQRコードは1回のみ有効です。<br/>スクショ対策済み
                                         </div>
 
-                                        {/* QR Code */}
-                                        <div className="bg-slate-900 p-3 rounded-xl inline-block shadow-lg relative group transition-all duration-300 mb-6">
+                                        {/* QR Code — 512px描画→240px表示でくっきり */}
+                                        <div className="bg-white p-3 rounded-xl inline-block shadow-lg relative group transition-all duration-300">
                                             <QRCodeCanvas 
                                                 value={earnQrPayload || 'NOT_SELECTED'} 
-                                                size={256} 
-                                                bgColor={"#1e293b"}
-                                                fgColor={"#ffffff"}
+                                                size={512}
+                                                bgColor="#ffffff"
+                                                fgColor="#000000"
                                                 level={"H"}
-                                                includeMargin={false}
+                                                includeMargin={true}
+                                                style={{
+                                                    width: 240,
+                                                    height: 240,
+                                                    display: 'block',
+                                                    imageRendering: 'pixelated',
+                                                }}
                                             />
                                         </div>
                                     </div>
