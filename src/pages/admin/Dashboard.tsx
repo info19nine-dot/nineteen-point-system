@@ -868,7 +868,7 @@ const Dashboard = () => {
                         <p className="text-slate-400 text-xs mt-1 relative z-10">会員のQRコードを読み取ってください</p>
                     </div>
 
-                    <div className="relative flex-1 min-h-0 bg-black overflow-hidden">
+                    <div className="relative flex-1 min-h-[280px] bg-black overflow-hidden">
                         <QrScanner
                             onScan={handleScanResult}
                             onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}

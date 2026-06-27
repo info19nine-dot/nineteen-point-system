@@ -488,36 +488,38 @@ const CardHome = () => {
                         </div>
                       </div>
                       
-                      <div className={`relative p-3 rounded-xl inline-block shadow-inner mb-6 transition-all duration-500 bg-white ${isQrConfirmed ? 'opacity-100' : 'opacity-20 blur-sm grayscale'} ${isSpecial ? 'ring-2 ring-yellow-500/40' : ''}`}>
-                           {isQrConfirmed ? (
-                               <QRCodeCanvas 
-                                   value={JSON.stringify({ 
-                                       memberId: user.id, 
-                                       userId: user.id, 
-                                       type: 'USE', 
-                                       amount: Number(spendAmount) 
-                                   })}
-                                   size={512}
-                                   bgColor="#ffffff"
-                                   fgColor="#000000"
-                                   level={"H"}
-                                   includeMargin={true}
-                                   style={{
-                                       width: 280,
-                                       height: 280,
-                                       display: 'block',
-                                       imageRendering: 'pixelated',
-                                   }}
-                               />
-                           ) : (
-                               <QrCode size={280} className="text-gray-300" />
-                           )}
-                           
-                           {!isQrConfirmed && (
-                               <div className="absolute inset-0 flex items-center justify-center">
-                                   <span className={`text-xs font-bold drop-shadow-md ${isSpecial ? 'text-gray-500' : 'text-white'}`}>未確定</span>
-                               </div>
-                           )}
+                      <div className="relative w-full flex justify-center mb-6">
+                          <div
+                              className={`bg-white p-4 rounded-2xl shadow-lg flex items-center justify-center ${
+                                  isSpecial ? 'ring-2 ring-yellow-500/40' : ''
+                              } ${isQrConfirmed ? '' : 'opacity-20 blur-sm grayscale'}`}
+                              style={{ width: 280, height: 280 }}
+                          >
+                              {isQrConfirmed ? (
+                                  <QRCodeCanvas
+                                      value={JSON.stringify({
+                                          memberId: user.id,
+                                          userId: user.id,
+                                          type: 'USE',
+                                          amount: Number(spendAmount),
+                                      })}
+                                      size={248}
+                                      bgColor="#ffffff"
+                                      fgColor="#000000"
+                                      level="H"
+                                      includeMargin={false}
+                                  />
+                              ) : (
+                                  <QrCode size={200} className="text-gray-300" />
+                              )}
+                          </div>
+                          {!isQrConfirmed && (
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <span className={`text-xs font-bold ${isSpecial ? 'text-gray-500' : 'text-slate-400'}`}>
+                                      未確定
+                                  </span>
+                              </div>
+                          )}
                       </div>
 
                       <p className={`text-xs transition-colors ${isQrConfirmed ? (isSpecial ? 'text-yellow-500 font-bold' : 'text-teal-600 font-bold') : (isSpecial ? 'text-gray-500' : 'text-slate-400')}`}>
