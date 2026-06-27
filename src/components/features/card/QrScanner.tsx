@@ -10,36 +10,18 @@ type QrScannerProps = {
     showRefocusHint?: boolean;
 };
 
-type CameraStartConfig = string | { facingMode: string };
+type CameraStartConfig = MediaTrackConstraints | string | { facingMode: string };
 
-function waitForScannerLayout(host: HTMLElement): Promise<void> {
-    return new Promise((resolve) => {
-        const ready = () => {
-            const { width, height } = host.getBoundingClientRect();
-            return width >= 200 && height >= 200;
-        };
-
-        if (ready()) {
-            resolve();
-            return;
-        }
-
-        const observer = new ResizeObserver(() => {
-            if (ready()) {
-                observer.disconnect();
-                resolve();
-            }
-        });
-        observer.observe(host);
-        setTimeout(() => {
-            observer.disconnect();
-            resolve();
-        }, 2000);
-    });
-}
+const CAMERA_CONSTRAINTS: MediaTrackConstraints = {
+    facingMode: { ideal: 'environment' },
+    width: { ideal: 1920, min: 640 },
+    height: { ideal: 1080, min: 480 },
+    // @ts-expect-error focusMode is valid in browsers but missing from TS lib
+    focusMode: { ideal: 'continuous' },
+};
 
 async function pickCameraConfigs(): Promise<CameraStartConfig[]> {
-    const configs: CameraStartConfig[] = [];
+    const configs: CameraStartConfig[] = [CAMERA_CONSTRAINTS];
 
     try {
         const cameras = await Html5Qrcode.getCameras();
@@ -82,6 +64,10 @@ async function enhanceVideoTrack(elementId: string) {
             advanced.push({ focusMode: 'single-shot' });
         }
 
+        if (caps?.zoom && typeof caps.zoom.min === 'number') {
+            advanced.push({ zoom: caps.zoom.min });
+        }
+
         if (advanced.length > 0) {
             await track.applyConstraints({ advanced } as MediaTrackConstraints);
         }
@@ -102,7 +88,6 @@ export const QrScanner = ({
     const onErrorRef = useRef(onError);
     const lastScanRef = useRef<{ text: string; at: number } | null>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
-    const hostRef = useRef<HTMLDivElement>(null);
     const activeRef = useRef(true);
     const [isRefocusing, setIsRefocusing] = useState(false);
     const [isStarting, setIsStarting] = useState(true);
@@ -142,14 +127,7 @@ export const QrScanner = ({
             try {
                 await scanner.start(
                     cameraConfig,
-                    {
-                        fps: 10,
-                        qrbox: (viewWidth, viewHeight) => {
-                            const edge = Math.min(viewWidth, viewHeight);
-                            const size = Math.max(180, Math.floor(edge * 0.72));
-                            return { width: size, height: size };
-                        },
-                    },
+                    { fps: 15, qrbox: undefined },
                     handleScan,
                     () => {}
                 );
@@ -192,11 +170,7 @@ export const QrScanner = ({
 
         const init = async () => {
             setIsStarting(true);
-            await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-            if (hostRef.current) {
-                await waitForScannerLayout(hostRef.current);
-            }
-            await new Promise((r) => setTimeout(r, 100));
+            await new Promise((r) => setTimeout(r, 300));
             if (!activeRef.current) return;
             try {
                 await startScanner();
@@ -225,13 +199,12 @@ export const QrScanner = ({
 
     return (
         <div
-            ref={hostRef}
             className={`qr-scanner-host ${className ?? ''}`}
             onClick={showRefocusHint ? refocus : undefined}
             role={showRefocusHint ? 'button' : undefined}
             aria-label={showRefocusHint ? 'タップでピントを再調整' : undefined}
         >
-            <div id={elementId} className="qr-scanner-viewport" />
+            <div id={elementId} className="absolute inset-0" />
 
             {(isStarting || isRefocusing) && (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/80 pointer-events-none">
