@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { QrReader } from 'react-qr-reader';
+import { QrScanner } from '../../components/features/card/QrScanner';
 
 
 
@@ -137,15 +137,11 @@ const Dashboard = () => {
     // ------------------------------------------------------------------
     // QR Code Scanning Logic (Staff scans Member to USE points)
     // ------------------------------------------------------------------
-    const handleScanResult = async (result: any) => {
-        if (!!result) {
-            // Prevent multiple scans
-            if (showScanSuccess) return;
+    const handleScanResult = async (text: string) => {
+        if (showScanSuccess) return;
+        if (!text) return;
 
-            try {
-                const text = result?.text;
-                if (!text) return;
-                
+        try {
                 // Parse JSON
                 let data;
                 try {
@@ -293,12 +289,10 @@ const Dashboard = () => {
 
             } catch (err) {
                 console.error("Scan/Transaction Error:", err);
-                // Translate common errors if possible, else show generic message
                 const errorMsg = (err as any).message || '不明なエラー';
                 setErrorModal({show: true, message: `処理に失敗しました。\n詳細: ${errorMsg}`});
                 setShowScanModal(false);
             }
-        }
     };
 
 
@@ -878,13 +872,10 @@ const Dashboard = () => {
                     <div className="relative flex-grow bg-black flex flex-col items-center justify-center overflow-hidden">
                         {/* Camera View */}
                         <div className="w-full h-full relative">
-                            <QrReader
-                                onResult={handleScanResult}
-                                constraints={{ facingMode: 'environment' }}
-                                className="w-full h-full object-cover"
-                                containerStyle={{ height: '100%', width: '100%' }}
-                                videoContainerStyle={{ height: '100%', width: '100%', paddingTop: 0 }}
-                                videoStyle={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                            <QrScanner
+                                onScan={handleScanResult}
+                                onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
+                                className="w-full h-full"
                             /> 
                             
                             {/* Overlay Frame */}

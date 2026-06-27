@@ -495,7 +495,7 @@ const CardHome = () => {
                         </div>
                       </div>
                       
-                      <div className={`relative p-4 rounded-xl inline-block shadow-inner mb-6 transition-all duration-500 ${isQrConfirmed ? 'opacity-100' : 'opacity-20 blur-sm grayscale'} ${isSpecial ? 'bg-black/50' : 'bg-slate-800'}`}>
+                      <div className={`relative p-3 rounded-xl inline-block shadow-inner mb-6 transition-all duration-500 bg-white ${isQrConfirmed ? 'opacity-100' : 'opacity-20 blur-sm grayscale'} ${isSpecial ? 'ring-2 ring-yellow-500/40' : ''}`}>
                            {isQrConfirmed ? (
                                <QRCodeCanvas 
                                    value={JSON.stringify({ 
@@ -504,14 +504,20 @@ const CardHome = () => {
                                        type: 'USE', 
                                        amount: Number(spendAmount) 
                                    })}
-                                   size={160}
-                                   bgColor={isSpecial ? "#000000" : "#1e293b"}
-                                   fgColor={isSpecial ? "#d4af37" : "#ffffff"} // Gold QR for Special
+                                   size={512}
+                                   bgColor="#ffffff"
+                                   fgColor="#000000"
                                    level={"H"}
                                    includeMargin={true}
+                                   style={{
+                                       width: 240,
+                                       height: 240,
+                                       display: 'block',
+                                       imageRendering: 'pixelated',
+                                   }}
                                />
                            ) : (
-                               <QrCode size={160} className={isSpecial ? "text-gray-700" : "text-white"} />
+                               <QrCode size={240} className="text-gray-300" />
                            )}
                            
                            {!isQrConfirmed && (
