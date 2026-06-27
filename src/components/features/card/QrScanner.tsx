@@ -6,37 +6,59 @@ type QrScannerProps = {
     onScan: (text: string) => void;
     onError?: (message: string) => void;
     className?: string;
-    /** Shown when showRefocusHint — e.g. staff scanning member phone QR */
     showRefocusHint?: boolean;
 };
 
-type CameraStartConfig = MediaTrackConstraints | string | { facingMode: string };
+type CameraStartConfig = string | MediaTrackConstraints | { facingMode: string };
 
-const CAMERA_CONSTRAINTS: MediaTrackConstraints = {
-    facingMode: { ideal: 'environment' },
-    width: { ideal: 1920, min: 640 },
-    height: { ideal: 1080, min: 480 },
-    // @ts-expect-error focusMode is valid in browsers but missing from TS lib
-    focusMode: { ideal: 'continuous' },
-};
+function waitForHostLayout(host: HTMLElement): Promise<void> {
+    return new Promise((resolve) => {
+        const ready = () => {
+            const { width, height } = host.getBoundingClientRect();
+            return width >= 200 && height >= 200;
+        };
+
+        if (ready()) {
+            resolve();
+            return;
+        }
+
+        const observer = new ResizeObserver(() => {
+            if (ready()) {
+                observer.disconnect();
+                resolve();
+            }
+        });
+        observer.observe(host);
+        window.setTimeout(() => {
+            observer.disconnect();
+            resolve();
+        }, 1500);
+    });
+}
 
 async function pickCameraConfigs(): Promise<CameraStartConfig[]> {
-    const configs: CameraStartConfig[] = [CAMERA_CONSTRAINTS];
+    const configs: CameraStartConfig[] = [{ facingMode: 'environment' }];
 
     try {
         const cameras = await Html5Qrcode.getCameras();
         const back = cameras.find((c) =>
             /back|rear|environment|後|アウト|out/i.test(c.label)
         );
-        if (back) configs.push(back.id);
-        if (cameras.length > 0 && !back) {
-            configs.push(cameras[cameras.length - 1].id);
+        if (back) {
+            configs.unshift(back.id);
+        } else if (cameras.length > 0) {
+            configs.unshift(cameras[cameras.length - 1].id);
         }
     } catch {
         /* getCameras unsupported or denied before start */
     }
 
-    configs.push({ facingMode: 'environment' });
+    configs.push({
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280, min: 640 },
+        height: { ideal: 720, min: 480 },
+    });
     configs.push({ facingMode: 'user' });
 
     return configs;
@@ -88,9 +110,11 @@ export const QrScanner = ({
     const onErrorRef = useRef(onError);
     const lastScanRef = useRef<{ text: string; at: number } | null>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
+    const hostRef = useRef<HTMLDivElement>(null);
     const activeRef = useRef(true);
     const [isRefocusing, setIsRefocusing] = useState(false);
     const [isStarting, setIsStarting] = useState(true);
+    const [startError, setStartError] = useState<string | null>(null);
 
     onScanRef.current = onScan;
     onErrorRef.current = onError;
@@ -149,40 +173,40 @@ export const QrScanner = ({
             : new Error('カメラを起動できません。ブラウザのカメラ許可を確認してください。');
     }, [elementId, handleScan]);
 
+    const runStart = useCallback(async () => {
+        setStartError(null);
+        setIsStarting(true);
+        if (hostRef.current) {
+            await waitForHostLayout(hostRef.current);
+        }
+        await new Promise((r) => window.setTimeout(r, 200));
+        if (!activeRef.current) return;
+        try {
+            await startScanner();
+            if (!activeRef.current) return;
+            setIsStarting(false);
+        } catch (e: unknown) {
+            if (!activeRef.current) return;
+            setIsStarting(false);
+            const message = e instanceof Error ? e.message : 'カメラを起動できません';
+            setStartError(message);
+            onErrorRef.current?.(message);
+        }
+    }, [startScanner]);
+
     const refocus = useCallback(async () => {
         if (isRefocusing) return;
         setIsRefocusing(true);
-        setIsStarting(true);
         try {
-            await startScanner();
-            setIsStarting(false);
-        } catch (e: unknown) {
-            setIsStarting(false);
-            const message = e instanceof Error ? e.message : 'カメラを再起動できません';
-            onErrorRef.current?.(message);
+            await runStart();
         } finally {
             setIsRefocusing(false);
         }
-    }, [isRefocusing, startScanner]);
+    }, [isRefocusing, runStart]);
 
     useEffect(() => {
         activeRef.current = true;
-
-        const init = async () => {
-            setIsStarting(true);
-            await new Promise((r) => setTimeout(r, 300));
-            if (!activeRef.current) return;
-            try {
-                await startScanner();
-                setIsStarting(false);
-            } catch (e: unknown) {
-                setIsStarting(false);
-                const message = e instanceof Error ? e.message : 'カメラを起動できません';
-                onErrorRef.current?.(message);
-            }
-        };
-
-        init();
+        runStart();
 
         return () => {
             activeRef.current = false;
@@ -195,25 +219,40 @@ export const QrScanner = ({
                 scannerRef.current = null;
             }
         };
-    }, [elementId, startScanner]);
+    }, [elementId, runStart]);
 
     return (
         <div
+            ref={hostRef}
             className={`qr-scanner-host ${className ?? ''}`}
-            onClick={showRefocusHint ? refocus : undefined}
-            role={showRefocusHint ? 'button' : undefined}
-            aria-label={showRefocusHint ? 'タップでピントを再調整' : undefined}
+            onClick={showRefocusHint && !startError ? refocus : undefined}
+            role={showRefocusHint && !startError ? 'button' : undefined}
+            aria-label={showRefocusHint && !startError ? 'タップでピントを再調整' : undefined}
         >
             <div id={elementId} className="absolute inset-0" />
 
-            {(isStarting || isRefocusing) && (
+            {(isStarting || isRefocusing) && !startError && (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/80 pointer-events-none">
                     <Loader2 className="animate-spin text-teal-400" size={40} />
                     <p className="text-sm font-bold text-white/90">カメラを起動中...</p>
                 </div>
             )}
 
-            {showRefocusHint && !isStarting && (
+            {startError && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/90 px-6 text-center">
+                    <p className="text-sm font-bold text-red-300">カメラを起動できません</p>
+                    <p className="text-xs text-white/70 whitespace-pre-wrap">{startError}</p>
+                    <button
+                        type="button"
+                        onClick={() => void refocus()}
+                        className="rounded-full bg-teal-500 px-5 py-2 text-sm font-bold text-white"
+                    >
+                        再試行
+                    </button>
+                </div>
+            )}
+
+            {showRefocusHint && !isStarting && !startError && (
                 <div className="absolute bottom-4 left-0 right-0 z-20 flex flex-col items-center gap-2 pointer-events-none px-4">
                     <p className="text-xs font-bold text-white/90 bg-black/50 px-3 py-1.5 rounded-full text-center">
                         ピントが合わないときは画面をタップ

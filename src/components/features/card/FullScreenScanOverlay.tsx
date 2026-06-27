@@ -1,4 +1,3 @@
-import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { QrScanner } from './QrScanner';
 
@@ -10,7 +9,7 @@ type FullScreenScanOverlayProps = {
     onError?: (message: string) => void;
 };
 
-/** Full-screen scan UI portaled to body — same layout for member earn & staff use */
+/** Full-screen scan UI — same markup for member earn & staff use (no portal) */
 export function FullScreenScanOverlay({
     title,
     hint,
@@ -18,7 +17,7 @@ export function FullScreenScanOverlay({
     onScan,
     onError,
 }: FullScreenScanOverlayProps) {
-    return createPortal(
+    return (
         <div className="fixed inset-0 z-[9999] flex h-[100dvh] flex-col bg-black text-white">
             <div className="absolute top-0 z-10 flex w-full items-center justify-between bg-black/50 p-4">
                 <button
@@ -42,7 +41,6 @@ export function FullScreenScanOverlay({
                     {hint}
                 </p>
             </div>
-        </div>,
-        document.body
+        </div>
     );
 }
