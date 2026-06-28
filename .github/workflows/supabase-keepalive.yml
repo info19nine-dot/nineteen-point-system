@@ -1,0 +1,54 @@
+# Supabase 無料枠の自動停止（7日間アクセスなし）対策
+# GitHub → Settings → Secrets and variables → Actions に以下を登録:
+#   SUPABASE_URL        … https://safwaqsrvvwgnmsazrjm.supabase.co
+#   SUPABASE_ANON_KEY   … Supabase Dashboard → API Keys → anon public
+
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # 毎日 03:00 UTC（12:00 JST）
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::error::SUPABASE_URL が未設定です。GitHub → Settings → Secrets → Actions に追加してください。"
+            exit 1
+          fi
+          if [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_ANON_KEY が未設定です。GitHub → Settings → Secrets → Actions に追加してください。"
+            exit 1
+          fi
+
+      - name: Ping Auth health
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          echo "Pinging ${SUPABASE_URL}/auth/v1/health"
+          curl -fsS "${SUPABASE_URL}/auth/v1/health"
+          echo ""
+          echo "Auth health OK"
+
+      - name: Ping REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Pinging ${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1"
+          curl -fsS \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1"
+          echo ""
+          echo "REST API OK"
