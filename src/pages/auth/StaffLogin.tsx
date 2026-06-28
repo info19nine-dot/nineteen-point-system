@@ -4,6 +4,7 @@ import { Lock, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
+import { PwaInstallHint } from '../../components/PwaInstallHint';
 
 const StaffLogin = () => {
     const navigate = useNavigate();
@@ -193,6 +194,12 @@ const StaffLogin = () => {
                         <span>Secure Connection | ID-Based Auth</span>
                     </div>
                 </div>
+
+                <PwaInstallHint
+                    variant="dark"
+                    storageKey="pwa_hint_staff_dismissed"
+                    iosMessage="Safari 下部の「共有」→「ホーム画面に追加」で、スタッフ画面をアプリのように起動できます。"
+                />
             </div>
         </div>
     );

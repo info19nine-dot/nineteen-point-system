@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { User, Lock, Mail, AlertCircle, AlertTriangle, Info, ShieldX, ShieldCheck } from 'lucide-react';
+import { PwaInstallHint } from '../../components/PwaInstallHint';
 
 const MemberLogin = () => {
     const [email, setEmail] = useState('');
@@ -242,6 +243,11 @@ const MemberLogin = () => {
                         </Link>
                     </p>
                 </div>
+
+                <PwaInstallHint
+                    storageKey="pwa_hint_member_dismissed"
+                    iosMessage="Safari 下部の「共有」→「ホーム画面に追加」で、アプリのように起動できます。"
+                />
             </div>
 
             {/* Active Modal */}
