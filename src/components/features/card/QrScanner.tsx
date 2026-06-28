@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, type ComponentProps } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { QrReader } from 'react-qr-reader';
 
 type QrScannerProps = {
     onScan: (text: string) => void;
     className?: string;
+    /** Stop decode callbacks but keep the camera stream alive (iOS success transition) */
+    paused?: boolean;
 };
 
 function getVideoTrack(host: HTMLElement | null): MediaStreamTrack | undefined {
@@ -43,11 +45,26 @@ async function triggerTapFocus(track: MediaStreamTrack) {
     }
 }
 
-export const QrScanner = ({ onScan, className }: QrScannerProps) => {
+function captureVideoFrame(host: HTMLElement | null): string | null {
+    const video = host?.querySelector('video');
+    if (!video || video.videoWidth === 0) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.drawImage(video, 0, 0);
+    return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+export const QrScanner = ({ onScan, className, paused = false }: QrScannerProps) => {
     const hostRef = useRef<HTMLDivElement>(null);
     const onScanRef = useRef(onScan);
     const lastScanRef = useRef<{ text: string; at: number } | null>(null);
     const focusTimerRef = useRef<number | null>(null);
+    const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
 
     onScanRef.current = onScan;
 
@@ -67,7 +84,19 @@ export const QrScanner = ({ onScan, className }: QrScannerProps) => {
         };
     }, []);
 
+    useEffect(() => {
+        if (!paused) {
+            setFrozenFrame(null);
+            return;
+        }
+
+        const frame = captureVideoFrame(hostRef.current);
+        if (frame) setFrozenFrame(frame);
+    }, [paused]);
+
     const handleTapFocus = useCallback(() => {
+        if (paused) return;
+
         const track = getVideoTrack(hostRef.current);
         if (!track) return;
 
@@ -79,10 +108,12 @@ export const QrScanner = ({ onScan, className }: QrScannerProps) => {
             void applyContinuousFocus(track);
             focusTimerRef.current = null;
         }, 900);
-    }, []);
+    }, [paused]);
 
     const handleResult = useCallback<NonNullable<ComponentProps<typeof QrReader>['onResult']>>(
         (result) => {
+            if (paused) return;
+
             const text = result?.getText();
             if (!text) return;
 
@@ -92,11 +123,13 @@ export const QrScanner = ({ onScan, className }: QrScannerProps) => {
             lastScanRef.current = { text, at: now };
             onScanRef.current(text);
         },
-        []
+        [paused]
     );
 
     const cameraConstraints = {
         facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
         focusMode: { ideal: 'continuous' },
     } as MediaTrackConstraints;
 
@@ -113,9 +146,21 @@ export const QrScanner = ({ onScan, className }: QrScannerProps) => {
                 constraints={cameraConstraints}
                 containerStyle={{ width: '100%', height: '100%' }}
                 videoContainerStyle={{ width: '100%', height: '100%', paddingTop: 0 }}
-                videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                videoStyle={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    opacity: paused && frozenFrame ? 0 : 1,
+                }}
                 scanDelay={300}
             />
+            {paused && frozenFrame && (
+                <img
+                    src={frozenFrame}
+                    alt=""
+                    className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                />
+            )}
         </div>
     );
 };

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { FullScreenScanOverlay, IOS_CAMERA_TEARDOWN_MS, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
+import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -140,13 +140,9 @@ const Dashboard = () => {
         setScanResultData(null);
     };
 
-    const finishScanSuccess = async (type: 'EARN' | 'USE', data: { amount: number }) => {
+    const finishScanSuccess = (type: 'EARN' | 'USE', data: { amount: number }) => {
         setScanResultData(data);
         setSuccessType(type);
-        setScanOverlayPhase('processing');
-
-        await new Promise((resolve) => window.setTimeout(resolve, IOS_CAMERA_TEARDOWN_MS));
-
         setScanOverlayPhase('success');
         window.setTimeout(() => {
             void fetchData();
@@ -213,6 +209,7 @@ const Dashboard = () => {
                     return;
                 }
 
+                setScanOverlayPhase('processing');
                 setScanResultData(data);
                 
                 // 1. Check Balance & Status
@@ -249,7 +246,7 @@ const Dashboard = () => {
 
                     if (rpcError) throw rpcError;
 
-                    await finishScanSuccess('EARN', data);
+                    finishScanSuccess('EARN', data);
                     return;
                 }
                 // ------------------
@@ -271,7 +268,7 @@ const Dashboard = () => {
 
                 if (rpcError) throw rpcError;
 
-                await finishScanSuccess('USE', data);
+                finishScanSuccess('USE', data);
 
             } catch (err) {
                 console.error("Scan/Transaction Error:", err);
@@ -841,7 +838,7 @@ const Dashboard = () => {
         {showScanModal && (
             <FullScreenScanOverlay
                 title="ポイント消化"
-                hint="会員のQRコードを枠内に合わせてください"
+                hint="会員のQRを枠のあたりに映してください"
                 phase={scanOverlayPhase}
                 successType={successType}
                 successAmount={scanResultData?.amount != null ? Number(scanResultData.amount) : undefined}

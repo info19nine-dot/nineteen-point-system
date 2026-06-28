@@ -4,6 +4,8 @@ import { ScanFrameOverlay } from './ScanFrameOverlay';
 
 export type ScanOverlayPhase = 'scanning' | 'processing' | 'success';
 
+export const SCAN_DISTANCE_HINT = '15〜25cm離して、枠のあたりに映してください（寄りすぎ注意）';
+
 type FullScreenScanOverlayProps = {
     title: string;
     hint: string;
@@ -15,7 +17,7 @@ type FullScreenScanOverlayProps = {
     successAmount?: number;
 };
 
-/** Full-screen scan UI — keeps one fixed layer through processing/success (iOS Safari) */
+/** Full-screen scan — camera stays alive through processing/success (iOS Safari) */
 export function FullScreenScanOverlay({
     title,
     hint,
@@ -30,9 +32,10 @@ export function FullScreenScanOverlay({
     const isProcessing = phase === 'processing';
     const isSuccess = phase === 'success';
     const canClose = isScanning;
+    const cameraPaused = !isScanning;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-black text-white">
+        <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden bg-black text-white">
             <div className="absolute top-0 z-30 flex w-full items-center justify-between bg-black/50 p-4">
                 <button
                     type="button"
@@ -53,25 +56,33 @@ export function FullScreenScanOverlay({
             </div>
 
             <div className="relative min-h-0 flex-1">
+                <QrScanner
+                    onScan={onScan}
+                    paused={cameraPaused}
+                    className="absolute inset-0"
+                />
+
                 {isScanning && (
                     <>
-                        <QrScanner onScan={onScan} className="absolute inset-0" />
                         <ScanFrameOverlay accent={accent} />
-                        <p className="pointer-events-none absolute bottom-10 left-0 right-0 z-30 px-4 text-center text-sm font-bold text-white drop-shadow-md">
-                            {hint}
-                        </p>
+                        <div className="pointer-events-none absolute bottom-8 left-0 right-0 z-30 space-y-1 px-4 text-center">
+                            <p className="text-sm font-bold text-white drop-shadow-md">{hint}</p>
+                            <p className="text-xs font-medium text-white/80 drop-shadow-md">
+                                {SCAN_DISTANCE_HINT}
+                            </p>
+                        </div>
                     </>
                 )}
 
                 {isProcessing && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black">
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black/55 backdrop-blur-[2px]">
                         <Loader2 className="animate-spin text-teal-400" size={48} />
                         <p className="text-sm font-bold text-white/90">処理中...</p>
                     </div>
                 )}
 
                 {isSuccess && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/90 p-6">
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/55 p-6 backdrop-blur-[2px]">
                         <div className="w-full max-w-sm rounded-3xl bg-white p-8 text-center text-slate-800 shadow-2xl">
                             <div
                                 className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full ${
@@ -113,6 +124,3 @@ export function FullScreenScanOverlay({
         </div>
     );
 }
-
-/** Let iOS Safari finish releasing the camera before swapping UI */
-export const IOS_CAMERA_TEARDOWN_MS = 350;

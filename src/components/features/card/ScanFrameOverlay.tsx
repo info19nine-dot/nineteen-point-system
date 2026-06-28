@@ -12,7 +12,7 @@ export function ScanFrameOverlay({ accent = 'teal' }: ScanFrameOverlayProps) {
 
     return (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center border-[40px] border-black/50">
-            <div className={`relative h-64 w-64 rounded-xl border-4 ${frameClass}`}>
+            <div className={`relative h-[280px] w-[280px] rounded-xl border-4 ${frameClass}`}>
                 <div className="absolute inset-0 animate-pulse border-2 border-white/20" />
                 <div className={`absolute top-1/2 h-0.5 w-full animate-ping ${scanLineClass}`} />
             </div>

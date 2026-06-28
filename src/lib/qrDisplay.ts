@@ -2,10 +2,10 @@
 export const QR_CANVAS_SIZE = 512;
 
 /** Store earn QR on-screen size (CSS px) */
-export const QR_EARN_DISPLAY_PX = 240;
+export const QR_EARN_DISPLAY_PX = 280;
 
 /** Member use QR — same on-screen size as earn (no upscale) */
-export const QR_USE_DISPLAY_PX = 240;
+export const QR_USE_DISPLAY_PX = 280;
 
 export function qrCanvasStyle(displayPx: number) {
     return {

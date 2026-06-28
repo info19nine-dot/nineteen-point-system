@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Scan, QrCode, ChevronLeft, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
 import { QRCodeCanvas } from 'qrcode.react';
-import { FullScreenScanOverlay, IOS_CAMERA_TEARDOWN_MS, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
+import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { QR_CANVAS_SIZE, QR_USE_CANVAS_STYLE, QR_USE_DISPLAY_PX } from '../../lib/qrDisplay';
 import { Skeleton } from '../../components/ui/skeleton';
 
@@ -234,12 +234,8 @@ const CardHome = () => {
       setScanOverlayPhase('scanning');
   };
 
-  const finishScanSuccess = async (amount: number) => {
+  const finishScanSuccess = (amount: number) => {
       setScanSuccessAmount(amount);
-      setScanOverlayPhase('processing');
-
-      await new Promise((resolve) => window.setTimeout(resolve, IOS_CAMERA_TEARDOWN_MS));
-
       setScanOverlayPhase('success');
       window.setTimeout(() => {
           void fetchHistory();
@@ -291,6 +287,7 @@ const CardHome = () => {
 
           setIsSubmitting(true);
           setActiveModal(null);
+          setScanOverlayPhase('processing');
 
           const { error: rpcError } = await supabase.rpc('execute_point_transaction', {
               p_amount: Number(amount),
@@ -302,7 +299,7 @@ const CardHome = () => {
 
           if (rpcError) throw rpcError;
 
-          await finishScanSuccess(Number(amount));
+          finishScanSuccess(Number(amount));
 
       } catch (e: any) {
           console.error("Earn Error:", e);
@@ -447,7 +444,7 @@ const CardHome = () => {
       return (
           <FullScreenScanOverlay
               title="ポイント獲得"
-              hint="店舗のQRコードを枠内に合わせてください"
+              hint="店舗のQRを枠のあたりに映してください"
               accent={isSpecial ? 'gold' : 'teal'}
               phase={scanOverlayPhase}
               successType="EARN"
