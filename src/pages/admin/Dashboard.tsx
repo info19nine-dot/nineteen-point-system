@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
@@ -64,6 +64,7 @@ const Dashboard = () => {
     const [recentTransactions, setRecentTransactions] = useState<TransactionWithMember[]>([]);
     const [courses, setCourses] = useState<any[]>([]); // Dynamic courses
     const [isLoading, setIsLoading] = useState(true);
+    const isScanProcessing = useRef(false);
 
 
 
@@ -138,17 +139,16 @@ const Dashboard = () => {
     // QR Code Scanning Logic (Staff scans Member to USE points)
     // ------------------------------------------------------------------
     const handleScanResult = async (text: string) => {
-        if (showScanSuccess) return;
+        if (showScanSuccess || isScanProcessing.current) return;
         if (!text) return;
 
         try {
+                isScanProcessing.current = true;
                 // Parse JSON
                 let data;
                 try {
                     data = JSON.parse(text);
-                } catch (e) {
-                    console.warn("Invalid JSON QR");
-                    setErrorModal({show: true, message: "無効なQRコード形式です (JSON解析失敗)"});
+                } catch {
                     return;
                 }
 
@@ -187,9 +187,7 @@ const Dashboard = () => {
                 // ---------------------------------------
 
                 if ((type !== 'USE' && type !== 'use_points' && type !== 'EARN') || !memberId || !amount) {
-                    console.warn("Invalid QR format or type", data);
-                    setErrorModal({show: true, message: "対応していないQRコードです (データ形式不整合)"});
-                    return; // Ignore invalid QRs
+                    return;
                 }
 
                 // Execute Transaction
@@ -270,6 +268,8 @@ const Dashboard = () => {
                 const errorMsg = (err as any).message || '不明なエラー';
                 setErrorModal({show: true, message: `処理に失敗しました。\n詳細: ${errorMsg}`});
                 setShowScanModal(false);
+            } finally {
+                isScanProcessing.current = false;
             }
     };
 
@@ -831,7 +831,6 @@ const Dashboard = () => {
                 hint="会員のQRコードを読み取ってください"
                 onClose={() => setShowScanModal(false)}
                 onScan={handleScanResult}
-                onError={(message) => setErrorModal({ show: true, message: `カメラエラー: ${message}` })}
             />
         )}
 

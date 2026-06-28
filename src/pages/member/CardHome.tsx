@@ -249,7 +249,6 @@ const CardHome = () => {
           try {
               data = JSON.parse(text);
           } catch {
-              setActiveModal({ type: 'error', title: '読み取りエラー', message: 'このQRコードは店舗のポイント用QRではありません' });
               return;
           }
 
@@ -257,7 +256,6 @@ const CardHome = () => {
           const amount = data.amount ?? data.points;
 
           if (type !== 'EARN' || !amount) {
-              setActiveModal({ type: 'error', title: '読み取りエラー', message: '店舗のコースQRを選んでから表示されたコードを読み取ってください' });
               return;
           }
 
@@ -269,6 +267,7 @@ const CardHome = () => {
           }
 
           setIsSubmitting(true);
+          setActiveModal(null);
 
           const { error: rpcError } = await supabase.rpc('execute_point_transaction', {
               p_amount: Number(amount),
@@ -436,7 +435,6 @@ const CardHome = () => {
               hint="店舗のQRコードをスキャンしてください"
               onClose={() => setActiveTab('home')}
               onScan={handleScanResult}
-              onError={(message) => setActiveModal({ type: 'error', title: 'カメラエラー', message })}
           />
       );
   }

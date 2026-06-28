@@ -6,7 +6,6 @@ type FullScreenScanOverlayProps = {
     hint: string;
     onClose: () => void;
     onScan: (text: string) => void;
-    onError?: (message: string) => void;
 };
 
 /** Full-screen scan UI — same markup for member earn & staff use (no portal) */
@@ -15,7 +14,6 @@ export function FullScreenScanOverlay({
     hint,
     onClose,
     onScan,
-    onError,
 }: FullScreenScanOverlayProps) {
     return (
         <div className="fixed inset-0 z-[9999] flex h-[100dvh] flex-col bg-black text-white">
@@ -31,11 +29,7 @@ export function FullScreenScanOverlay({
                 <div className="w-9" />
             </div>
             <div className="relative min-h-0 flex-1">
-                <QrScanner
-                    onScan={onScan}
-                    onError={onError}
-                    className="absolute inset-0"
-                />
+                <QrScanner onScan={onScan} className="absolute inset-0" />
                 <p className="pointer-events-none absolute bottom-10 left-0 right-0 z-10 px-4 text-center text-sm font-bold text-white drop-shadow-md">
                     {hint}
                 </p>
