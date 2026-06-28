@@ -1,7 +1,7 @@
 # Supabase 無料枠の自動停止（7日間アクセスなし）対策
-# GitHub → Settings → Secrets and variables → Actions に以下を登録:
+# GitHub → Settings → Secrets and variables → Actions:
 #   SUPABASE_URL        … https://safwaqsrvvwgnmsazrjm.supabase.co
-#   SUPABASE_ANON_KEY   … Supabase Dashboard → API Keys → anon public
+#   SUPABASE_ANON_KEY   … anon / publishable key
 
 name: Supabase Keep-Alive
 
@@ -17,38 +17,38 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Validate secrets
+      - name: Ping Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$SUPABASE_URL" ]; then
-            echo "::error::SUPABASE_URL が未設定です。GitHub → Settings → Secrets → Actions に追加してください。"
-            exit 1
-          fi
-          if [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "::error::SUPABASE_ANON_KEY が未設定です。GitHub → Settings → Secrets → Actions に追加してください。"
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::SUPABASE_URL と SUPABASE_ANON_KEY を Secrets に登録してください。"
             exit 1
           fi
 
-      - name: Ping Auth health
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        run: |
-          echo "Pinging ${SUPABASE_URL}/auth/v1/health"
-          curl -fsS "${SUPABASE_URL}/auth/v1/health"
-          echo ""
-          echo "Auth health OK"
+          URL=$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]' | sed 's|/$||')
+          KEY=$(printf '%s' "$SUPABASE_ANON_KEY" | tr -d '[:space:]')
 
-      - name: Ping REST API
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: |
-          echo "Pinging ${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1"
-          curl -fsS \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-            "${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1"
-          echo ""
-          echo "REST API OK"
+          if [[ ! "$URL" =~ ^https:// ]]; then
+            echo "::error::SUPABASE_URL は https:// で始まる必要があります。"
+            exit 1
+          fi
+
+          echo "Ping: ${URL}/rest/v1/"
+
+          HTTP=$(curl -sS -o /tmp/supabase-ping.txt -w "%{http_code}" \
+            -H "apikey: ${KEY}" \
+            -H "Authorization: Bearer ${KEY}" \
+            "${URL}/rest/v1/" || echo "000")
+
+          echo "HTTP status: ${HTTP}"
+
+          if [ "$HTTP" = "000" ]; then
+            echo "::error::Supabase に接続できませんでした。"
+            exit 1
+          fi
+
+          echo "Supabase keep-alive OK"
