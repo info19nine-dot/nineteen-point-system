@@ -190,9 +190,7 @@ const Dashboard = () => {
                     return;
                 }
 
-                // Execute Transaction
-                setShowScanModal(false); // Close Scanner immediately
-                setScanResultData(data); // Store for success modal
+                setScanResultData(data);
                 
                 // 1. Check Balance & Status
                 const { data: member, error: memberError } = await supabase
@@ -226,6 +224,7 @@ const Dashboard = () => {
 
                     if (rpcError) throw rpcError;
 
+                    setShowScanModal(false);
                     setSuccessType('EARN');
                     setShowScanSuccess(true);
                     fetchData();
@@ -253,6 +252,7 @@ const Dashboard = () => {
 
                 if (rpcError) throw rpcError;
 
+                setShowScanModal(false);
                 setSuccessType('USE');
                 setShowScanSuccess(true);
                 fetchData(); // Refresh history
@@ -828,7 +828,7 @@ const Dashboard = () => {
         {showScanModal && (
             <FullScreenScanOverlay
                 title="ポイント消化"
-                hint="会員のQRコードを読み取ってください"
+                hint="会員のQRコードを枠内に合わせてください"
                 onClose={() => setShowScanModal(false)}
                 onScan={handleScanResult}
             />

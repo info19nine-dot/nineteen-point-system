@@ -279,6 +279,7 @@ const CardHome = () => {
 
           if (rpcError) throw rpcError;
 
+          setActiveModal(null);
           setEarnedAmount(Number(amount));
           setSuccessMode('earn');
           setActiveTab('home');
@@ -432,7 +433,8 @@ const CardHome = () => {
       return (
           <FullScreenScanOverlay
               title="ポイント獲得"
-              hint="店舗のQRコードをスキャンしてください"
+              hint="店舗のQRコードを枠内に合わせてください"
+              accent={isSpecial ? 'gold' : 'teal'}
               onClose={() => setActiveTab('home')}
               onScan={handleScanResult}
           />
@@ -680,7 +682,10 @@ const CardHome = () => {
       {/* Floating Action Buttons */}
       <div className="px-6 -mt-6 relative z-20 grid grid-cols-2 gap-3 max-w-md mx-auto">
           <button 
-            onClick={() => setActiveTab('scan')}
+            onClick={() => {
+                setActiveModal(null);
+                setActiveTab('scan');
+            }}
             className={`p-3 rounded-xl shadow-lg flex flex-col items-center justify-center gap-1.5 transition-transform hover:-translate-y-1 active:scale-95 touch-manipulation relative overflow-hidden group ${
                 isSpecial 
                 ? 'bg-gradient-to-br from-yellow-700 to-yellow-900 text-white border border-yellow-500/30' 

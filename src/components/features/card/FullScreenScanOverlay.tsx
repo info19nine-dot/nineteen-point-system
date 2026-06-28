@@ -1,23 +1,26 @@
 import { X } from 'lucide-react';
 import { QrScanner } from './QrScanner';
+import { ScanFrameOverlay } from './ScanFrameOverlay';
 
 type FullScreenScanOverlayProps = {
     title: string;
     hint: string;
     onClose: () => void;
     onScan: (text: string) => void;
+    accent?: 'teal' | 'gold';
 };
 
-/** Full-screen scan UI — same markup for member earn & staff use (no portal) */
+/** Full-screen scan UI — member earn & staff use share the same frame guide */
 export function FullScreenScanOverlay({
     title,
     hint,
     onClose,
     onScan,
+    accent = 'teal',
 }: FullScreenScanOverlayProps) {
     return (
         <div className="fixed inset-0 z-[9999] flex h-[100dvh] flex-col bg-black text-white">
-            <div className="absolute top-0 z-10 flex w-full items-center justify-between bg-black/50 p-4">
+            <div className="absolute top-0 z-30 flex w-full items-center justify-between bg-black/50 p-4">
                 <button
                     type="button"
                     onClick={onClose}
@@ -30,7 +33,8 @@ export function FullScreenScanOverlay({
             </div>
             <div className="relative min-h-0 flex-1">
                 <QrScanner onScan={onScan} className="absolute inset-0" />
-                <p className="pointer-events-none absolute bottom-10 left-0 right-0 z-10 px-4 text-center text-sm font-bold text-white drop-shadow-md">
+                <ScanFrameOverlay accent={accent} />
+                <p className="pointer-events-none absolute bottom-10 left-0 right-0 z-30 px-4 text-center text-sm font-bold text-white drop-shadow-md">
                     {hint}
                 </p>
             </div>
