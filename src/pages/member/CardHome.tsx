@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Scan, QrCode, ChevronLeft, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
 import { QRCodeCanvas } from 'qrcode.react';
-import { FullScreenScanOverlay } from '../../components/features/card/FullScreenScanOverlay';
+import { FullScreenScanOverlay, IOS_CAMERA_TEARDOWN_MS, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { QR_CANVAS_SIZE, QR_USE_CANVAS_STYLE, QR_USE_DISPLAY_PX } from '../../lib/qrDisplay';
 import { Skeleton } from '../../components/ui/skeleton';
 
@@ -34,8 +34,9 @@ const CardHome = () => {
   
   const isSpecial = profile?.rank === 'special'; // Helper const
   
-  const [successMode, setSuccessMode] = useState<'none' | 'earn' | 'pay'>('none');
-  const [earnedAmount, setEarnedAmount] = useState(0);
+  const [successMode, setSuccessMode] = useState<'none' | 'pay'>('none');
+  const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
+  const [scanSuccessAmount, setScanSuccessAmount] = useState<number | undefined>();
   const [isQrConfirmed, setIsQrConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMode, setErrorMode] = useState<string | null>(null);
@@ -228,20 +229,42 @@ const CardHome = () => {
     };
   }, [user]);
 
+  const closeScanOverlay = () => {
+      setActiveTab('home');
+      setScanOverlayPhase('scanning');
+  };
+
+  const finishScanSuccess = async (amount: number) => {
+      setScanSuccessAmount(amount);
+      setScanOverlayPhase('processing');
+
+      await new Promise((resolve) => window.setTimeout(resolve, IOS_CAMERA_TEARDOWN_MS));
+
+      setScanOverlayPhase('success');
+      window.setTimeout(() => {
+          void fetchHistory();
+      }, 150);
+      window.setTimeout(() => {
+          closeScanOverlay();
+      }, 3000);
+  };
+
   // ----------------------------------------------------------------
   // Real QR Scan Logic (Member EARNS points)
   // ----------------------------------------------------------------
   const handleScanResult = async (text: string) => {
-      if (successMode !== 'none' || isSubmitting) return;
+      if (scanOverlayPhase !== 'scanning' || isSubmitting) return;
       if (!text) return;
 
       try {
           if (profile?.is_blacklisted) {
               setErrorMode('suspended');
+              closeScanOverlay();
               return;
           }
           if (profile?.is_deleted) {
               setErrorMode('deleted');
+              closeScanOverlay();
               return;
           }
 
@@ -262,7 +285,7 @@ const CardHome = () => {
           const now = Date.now();
           if (!timestamp || now - timestamp > 1000 * 60 * 60) {
               setActiveModal({ type: 'error', title: 'エラー', message: 'QRコードの有効期限が切れています' });
-              setActiveTab('home');
+              closeScanOverlay();
               return;
           }
 
@@ -279,22 +302,14 @@ const CardHome = () => {
 
           if (rpcError) throw rpcError;
 
-          setActiveModal(null);
-          setEarnedAmount(Number(amount));
-          setSuccessMode('earn');
-          setActiveTab('home');
-          fetchHistory();
-          setIsSubmitting(false);
-
-          setTimeout(() => {
-              setSuccessMode('none');
-          }, 3000);
+          await finishScanSuccess(Number(amount));
 
       } catch (e: any) {
           console.error("Earn Error:", e);
           setActiveModal({ type: 'error', title: 'エラー', message: "ポイント獲得に失敗しました\n" + (e.message || JSON.stringify(e)) });
+          closeScanOverlay();
+      } finally {
           setIsSubmitting(false);
-          setActiveTab('home');
       }
   };
 
@@ -394,9 +409,8 @@ const CardHome = () => {
       );
   }
 
-  // Render Success Popup (PayPay Style)
-  if (successMode !== 'none') {
-      // Apply Gold theme for both Earn and Pay if Special Member
+  // Render Success Popup (PayPay Style — staff scanned member QR)
+  if (successMode === 'pay') {
       const isGold = isSpecial;
       return (
           <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300 ${isGold ? 'bg-gradient-to-br from-[#1a1d24] to-[#0f1115] text-white' : 'bg-white text-slate-800'}`}>
@@ -414,11 +428,11 @@ const CardHome = () => {
               </div>
               
               <h2 className={`text-3xl font-black mb-2 relative z-10 ${isGold ? 'text-yellow-100' : 'text-slate-800'}`}>
-                  {successMode === 'earn' ? '獲得しました！' : '利用完了！'}
+                  利用完了！
               </h2>
               
               <p className={`text-5xl font-black tracking-tighter relative z-10 ${isGold ? 'text-yellow-400 drop-shadow-sm' : 'text-teal-500'}`}>
-                  {successMode === 'earn' ? `+${earnedAmount}` : `-${spendAmount}`}
+                  -{spendAmount}
                   <span className={`text-2xl ml-2 font-bold ${isGold ? 'text-yellow-100/70' : 'text-gray-400'}`}>pt</span>
               </p>
 
@@ -435,7 +449,10 @@ const CardHome = () => {
               title="ポイント獲得"
               hint="店舗のQRコードを枠内に合わせてください"
               accent={isSpecial ? 'gold' : 'teal'}
-              onClose={() => setActiveTab('home')}
+              phase={scanOverlayPhase}
+              successType="EARN"
+              successAmount={scanSuccessAmount}
+              onClose={closeScanOverlay}
               onScan={handleScanResult}
           />
       );
@@ -684,6 +701,8 @@ const CardHome = () => {
           <button 
             onClick={() => {
                 setActiveModal(null);
+                setScanOverlayPhase('scanning');
+                setScanSuccessAmount(undefined);
                 setActiveTab('scan');
             }}
             className={`p-3 rounded-xl shadow-lg flex flex-col items-center justify-center gap-1.5 transition-transform hover:-translate-y-1 active:scale-95 touch-manipulation relative overflow-hidden group ${

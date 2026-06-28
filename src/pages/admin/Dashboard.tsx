@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { FullScreenScanOverlay } from '../../components/features/card/FullScreenScanOverlay';
+import { FullScreenScanOverlay, IOS_CAMERA_TEARDOWN_MS, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -37,13 +37,14 @@ const Dashboard = () => {
     const [servedBy, setServedBy] = useState('');
 
     const [showScanModal, setShowScanModal] = useState(false);
+    const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
     // const [showHistory, setShowHistory] = useState(false); // Removed
     const [historyLimit, setHistoryLimit] = useState(5);
     
 
-    const [showScanSuccess, setShowScanSuccess] = useState(false);
-    const [successType, setSuccessType] = useState<'EARN' | 'USE'>('USE'); // New State
-    const [scanResultData, setScanResultData] = useState<any>(null); // To store scanned data temporarily
+    const [successType, setSuccessType] = useState<'EARN' | 'USE'>('USE');
+    const [showEarnQrSuccess, setShowEarnQrSuccess] = useState(false);
+    const [scanResultData, setScanResultData] = useState<any>(null);
     const [searchValue, setSearchValue] = useState('');
 
     // Manual Input State
@@ -133,13 +134,35 @@ const Dashboard = () => {
         }
     };
 
+    const closeScanOverlay = () => {
+        setShowScanModal(false);
+        setScanOverlayPhase('scanning');
+        setScanResultData(null);
+    };
+
+    const finishScanSuccess = async (type: 'EARN' | 'USE', data: { amount: number }) => {
+        setScanResultData(data);
+        setSuccessType(type);
+        setScanOverlayPhase('processing');
+
+        await new Promise((resolve) => window.setTimeout(resolve, IOS_CAMERA_TEARDOWN_MS));
+
+        setScanOverlayPhase('success');
+        window.setTimeout(() => {
+            void fetchData();
+        }, 150);
+        window.setTimeout(() => {
+            closeScanOverlay();
+        }, 3000);
+    };
+
 
 
     // ------------------------------------------------------------------
     // QR Code Scanning Logic (Staff scans Member to USE points)
     // ------------------------------------------------------------------
     const handleScanResult = async (text: string) => {
-        if (showScanSuccess || isScanProcessing.current) return;
+        if (scanOverlayPhase !== 'scanning' || isScanProcessing.current) return;
         if (!text) return;
 
         try {
@@ -165,7 +188,7 @@ const Dashboard = () => {
 
                 // --- NEW: SPECIAL MEMBER APPLICATION ---
                 if (type === 'APPLY') {
-                     setShowScanModal(false);
+                     closeScanOverlay();
                      // Fetch Profile using memberId
                      const { data: profile, error: pError } = await supabase
                          .from('profiles')
@@ -204,10 +227,12 @@ const Dashboard = () => {
                 // Check Status
                 if (member.is_blacklisted) {
                     setErrorModal({show: true, message: "この会員は利用停止中のため、ポイント利用はできません。"});
+                    closeScanOverlay();
                     return;
                 }
                 if (member.is_deleted) {
                     setErrorModal({show: true, message: "この会員は削除済みのため、利用できません。"});
+                    closeScanOverlay();
                     return;
                 }
 
@@ -224,14 +249,7 @@ const Dashboard = () => {
 
                     if (rpcError) throw rpcError;
 
-                    setShowScanModal(false);
-                    setSuccessType('EARN');
-                    setShowScanSuccess(true);
-                    fetchData();
-                    setTimeout(() => {
-                        setShowScanSuccess(false);
-                        setScanResultData(null);
-                    }, 3000);
+                    await finishScanSuccess('EARN', data);
                     return;
                 }
                 // ------------------
@@ -239,6 +257,7 @@ const Dashboard = () => {
                 // Check if user has enough points
                 if (member.points < amount) {
                     setErrorModal({show: true, message: `ポイント不足です (残高: ${member.points}pt)`});
+                    closeScanOverlay();
                     return;
                 }
 
@@ -252,22 +271,13 @@ const Dashboard = () => {
 
                 if (rpcError) throw rpcError;
 
-                setShowScanModal(false);
-                setSuccessType('USE');
-                setShowScanSuccess(true);
-                fetchData(); // Refresh history
-                
-                // Close success modal after 3s
-                setTimeout(() => {
-                    setShowScanSuccess(false);
-                    setScanResultData(null);
-                }, 3000);
+                await finishScanSuccess('USE', data);
 
             } catch (err) {
                 console.error("Scan/Transaction Error:", err);
                 const errorMsg = (err as any).message || '不明なエラー';
                 setErrorModal({show: true, message: `処理に失敗しました。\n詳細: ${errorMsg}`});
-                setShowScanModal(false);
+                closeScanOverlay();
             } finally {
                 isScanProcessing.current = false;
             }
@@ -334,7 +344,7 @@ const Dashboard = () => {
                     // Show Success Popup
                     setScanResultData({ amount: tx.amount }); 
                     setSuccessType('EARN');
-                    setShowScanSuccess(true);
+                    setShowEarnQrSuccess(true);
                     
                     // Reset QR state under the hood
                     setQrId(crypto.randomUUID());
@@ -343,7 +353,7 @@ const Dashboard = () => {
                     fetchData(); // Refresh history immediately
                     
                     setTimeout(() => {
-                        setShowScanSuccess(false);
+                        setShowEarnQrSuccess(false);
                         setScanResultData(null);
                     }, 3000);
                 }
@@ -499,7 +509,10 @@ const Dashboard = () => {
                         </div>
                     </button>
                     <button 
-                        onClick={() => setShowScanModal(true)}
+                        onClick={() => {
+                            setScanOverlayPhase('scanning');
+                            setShowScanModal(true);
+                        }}
                         className="flex-1 bg-white text-teal-600 border-2 border-teal-500 font-black text-lg py-4 rounded-2xl shadow-xl shadow-teal-500/10 transition-all active:scale-95 touch-manipulation flex flex-col items-center justify-center gap-2 hover:bg-teal-50"
                     >
                          <div className="bg-teal-50 p-2 rounded-full">
@@ -829,48 +842,33 @@ const Dashboard = () => {
             <FullScreenScanOverlay
                 title="ポイント消化"
                 hint="会員のQRコードを枠内に合わせてください"
-                onClose={() => setShowScanModal(false)}
+                phase={scanOverlayPhase}
+                successType={successType}
+                successAmount={scanResultData?.amount != null ? Number(scanResultData.amount) : undefined}
+                onClose={closeScanOverlay}
                 onScan={handleScanResult}
             />
         )}
 
         {/* Full History Overlay */}
 
-
-
-
-        {/* Success Modal (USE/EARN Points) */}
-        {showScanSuccess && (
+        {showEarnQrSuccess && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
                 <div className="bg-white rounded-3xl p-8 max-w-sm w-[90%] text-center shadow-2xl transform transition-all scale-100">
-                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                        successType === 'EARN' ? 'bg-teal-100 text-teal-600' : 'bg-orange-100 text-orange-600'
-                    }`}>
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-teal-100 text-teal-600">
                         <CheckCircle2 size={48} />
                     </div>
-                    <h3 className="text-2xl font-black text-slate-800 mb-2">
-                        {successType === 'EARN' ? '付与完了！' : '受付完了！'}
-                    </h3>
-                    <p className="text-gray-500 mb-6">
-                        {successType === 'EARN' ? 'ポイントを付与しました。' : 'ポイント利用を受け付けました。'}
-                    </p>
+                    <h3 className="text-2xl font-black text-slate-800 mb-2">付与完了！</h3>
+                    <p className="text-gray-500 mb-6">ポイントを付与しました。</p>
                     
                     {scanResultData && (
                         <div className="bg-slate-50 p-4 rounded-xl border border-gray-100 mb-4">
-                             <div className="text-xs text-gray-400 mb-1">
-                                {successType === 'EARN' ? '付与ポイント' : '利用ポイント'}
-                             </div>
-                             <div className={`text-3xl font-black ${successType === 'EARN' ? 'text-teal-600' : 'text-slate-800'}`}>
-                                 {successType === 'EARN' ? '+' : '-'}{Number(scanResultData.amount).toLocaleString()} <span className="text-base font-normal text-gray-400">pt</span>
+                             <div className="text-xs text-gray-400 mb-1">付与ポイント</div>
+                             <div className="text-3xl font-black text-teal-600">
+                                 +{Number(scanResultData.amount).toLocaleString()} <span className="text-base font-normal text-gray-400">pt</span>
                              </div>
                         </div>
                     )}
-
-                    <div className="animate-pulse h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={`h-full w-full rounded-full animate-[loading_1s_ease-in-out_infinite] ${
-                            successType === 'EARN' ? 'bg-teal-500' : 'bg-orange-500'
-                        }`}></div>
-                    </div>
                 </div>
             </div>
         )}
