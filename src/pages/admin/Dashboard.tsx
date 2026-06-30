@@ -5,7 +5,6 @@ import { Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsI
 import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { StaffUseQrModal } from '../../components/features/card/StaffUseQrModal';
-import { fetchUseQrSessionStatus, type UseQrSessionRow, type UseQrSessionStatusResponse } from '../../lib/useQrSession';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -40,7 +39,6 @@ const Dashboard = () => {
 
     const [showUseQrModal, setShowUseQrModal] = useState(false);
     const [activeUseSessionId, setActiveUseSessionId] = useState<string | null>(null);
-    const [pendingUseSession, setPendingUseSession] = useState<{ id: string; memberName: string } | null>(null);
     const [showUseQrSuccess, setShowUseQrSuccess] = useState(false);
     const [useSuccessAmount, setUseSuccessAmount] = useState<number | null>(null);
     const [showApplyScanModal, setShowApplyScanModal] = useState(false);
@@ -82,109 +80,50 @@ const Dashboard = () => {
         setActiveUseSessionId(id);
     }, []);
 
-    // 読取・完了のどちらかが分かったらQR発行画面は閉じる
-    useEffect(() => {
-        if (pendingUseSession) {
-            closeUseQrModal();
-        }
-    }, [pendingUseSession]);
-
-    useEffect(() => {
-        if (showUseQrSuccess) {
-            closeUseQrModal();
-        }
-    }, [showUseQrSuccess]);
-
-
-
     // Initial Data Fetch
     useEffect(() => {
         fetchData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [historyLimit]);
 
-    // QRモーダル表示中：会員の読取を親画面側で監視してモーダルを閉じる
+    // ポイント使用：発行(EARN)と同じく、取引完了でQRを閉じてからポップアップ
     useEffect(() => {
-        if (!showUseQrModal || !activeUseSessionId) return;
+        if (!activeUseSessionId || !showUseQrModal) return;
 
-        const check = async () => {
-            try {
-                const row = await fetchUseQrSessionStatus(activeUseSessionId);
-                if (row.status === 'inputting') {
-                    closeUseQrModal();
-                    setPendingUseSession({
-                        id: row.id,
-                        memberName: row.member_name || 'お客様',
-                    });
-                }
-            } catch {
-                /* RPC未適用時などは無視して次のポーリングへ */
-            }
-        };
-
-        void check();
-        const interval = window.setInterval(() => {
-            void check();
-        }, 800);
-
-        return () => window.clearInterval(interval);
-    }, [showUseQrModal, activeUseSessionId]);
-
-    useEffect(() => {
-        if (!pendingUseSession) return;
-
-        const handleCompleted = (row: UseQrSessionRow | UseQrSessionStatusResponse) => {
-            if (row.status === 'completed' && row.amount != null) {
-                closeUseQrModal();
-                setPendingUseSession(null);
-                setUseSuccessAmount(row.amount);
-                setShowUseQrSuccess(true);
-                void fetchData();
-                window.setTimeout(() => {
-                    setShowUseQrSuccess(false);
-                    setUseSuccessAmount(null);
-                }, 3000);
-            }
-            if (row.status === 'cancelled' || row.status === 'expired') {
-                setPendingUseSession(null);
-            }
-        };
-
-        const poll = async () => {
-            try {
-                const row = await fetchUseQrSessionStatus(pendingUseSession.id);
-                handleCompleted(row);
-            } catch {
-                /* ignore */
-            }
-        };
+        const sessionId = activeUseSessionId;
 
         const channel = supabase
-            .channel(`use-qr-pending:${pendingUseSession.id}`)
+            .channel(`use-qr-tx:${sessionId}`)
             .on(
                 'postgres_changes',
                 {
-                    event: 'UPDATE',
+                    event: 'INSERT',
                     schema: 'public',
-                    table: 'use_qr_sessions',
-                    filter: `id=eq.${pendingUseSession.id}`,
+                    table: 'transactions',
+                    filter: `qr_scan_id=eq.${sessionId}`,
                 },
-                (payload: { new: UseQrSessionRow }) => {
-                    handleCompleted(payload.new);
+                (payload: { new: { type?: string; amount?: number } }) => {
+                    const tx = payload.new;
+                    if (tx.type !== 'USE') return;
+
+                    setShowUseQrModal(false);
+                    setActiveUseSessionId(null);
+                    setUseSuccessAmount(Number(tx.amount));
+                    setShowUseQrSuccess(true);
+                    void fetchData();
+
+                    window.setTimeout(() => {
+                        setShowUseQrSuccess(false);
+                        setUseSuccessAmount(null);
+                    }, 3000);
                 }
             )
             .subscribe();
 
-        void poll();
-        const interval = window.setInterval(() => {
-            void poll();
-        }, 1000);
-
         return () => {
-            window.clearInterval(interval);
             void supabase.removeChannel(channel);
         };
-    }, [pendingUseSession]);
+    }, [activeUseSessionId, showUseQrModal]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -504,13 +443,6 @@ const Dashboard = () => {
 
         <main className="max-w-md mx-auto px-6 -mt-12 relative z-20 space-y-3">
 
-            {pendingUseSession && (
-                <div className="rounded-2xl border-2 border-teal-400 bg-teal-50 px-4 py-3 text-center text-sm font-bold text-teal-700 shadow-sm">
-                    {pendingUseSession.memberName}
-                    <span className="ml-1 font-medium">ポイント入力中…</span>
-                </div>
-            )}
-
             {/* Point Grant Card */}
             <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
                 <div className="flex gap-4 mb-4">
@@ -530,7 +462,6 @@ const Dashboard = () => {
                     </button>
                     <button 
                         onClick={() => {
-                            setPendingUseSession(null);
                             setActiveUseSessionId(null);
                             setShowUseQrModal(true);
                         }}
