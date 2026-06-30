@@ -368,7 +368,7 @@ const CardHome = () => {
           const message = e instanceof Error ? e.message : 'QRの読み取りに失敗しました';
           setActiveModal({ type: 'error', title: 'エラー', message });
           setScanOverlayPhase('scanning');
-          setActiveTab('code');
+          setActiveTab('use-scan');
       } finally {
           setIsSubmitting(false);
       }
@@ -557,8 +557,9 @@ const CardHome = () => {
               accent={isSpecial ? 'gold' : 'teal'}
               phase={scanOverlayPhase}
               onClose={() => {
+                  resetUseFlow();
                   setScanOverlayPhase('scanning');
-                  setActiveTab('code');
+                  setActiveTab('home');
               }}
               onScan={handleUseSessionScan}
           />
@@ -583,7 +584,7 @@ const CardHome = () => {
       );
   }
 
-  if (activeTab === 'code') {
+  if (activeTab === 'code' && (useFlowPhase === 'input' || useFlowPhase === 'processing')) {
       return (
           <div className={`fixed inset-0 flex flex-col z-50 ${isSpecial ? 'bg-[#0f1115]' : 'bg-slate-50'}`}>
               <div className={`p-4 flex justify-between items-center shadow-sm z-10 transition-all ${isSpecial ? 'bg-[#151921] text-white border-b border-white/10' : 'bg-white text-slate-800'}`}>
@@ -601,38 +602,7 @@ const CardHome = () => {
                   <div className="w-6" />
               </div>
               <div className={`flex-grow flex flex-col items-center justify-center p-6 space-y-8 ${isSpecial ? 'bg-gradient-to-b from-[#0f1115] to-[#1a1d24]' : 'bg-gradient-to-b from-teal-50 to-slate-50'}`}>
-                  {useFlowPhase === 'scan' && (
-                      <div className="w-full max-w-sm space-y-6 text-center">
-                          <div className={`rounded-3xl p-8 shadow-2xl ${isSpecial ? 'bg-[#1a1d24] border border-yellow-500/20' : 'bg-white border border-gray-100'}`}>
-                              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${isSpecial ? 'bg-yellow-900/30 text-yellow-500' : 'bg-teal-50 text-teal-600'}`}>
-                                  <Scan size={32} />
-                              </div>
-                              <h3 className={`mb-2 text-lg font-black ${isSpecial ? 'text-white' : 'text-slate-800'}`}>店舗のQRを読み取る</h3>
-                              <p className={`text-sm leading-relaxed ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>
-                                  受付のQRを読み取ったあと、
-                                  <br />
-                                  使うポイントを入力してください。
-                              </p>
-                          </div>
-                          <button
-                              type="button"
-                              onClick={() => {
-                                  setScanOverlayPhase('scanning');
-                                  setActiveTab('use-scan');
-                              }}
-                              className={`w-full font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-transform ${
-                                  isSpecial
-                                      ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 text-white'
-                                      : 'bg-slate-800 text-white'
-                              }`}
-                          >
-                              カメラを起動
-                          </button>
-                      </div>
-                  )}
-
-                  {(useFlowPhase === 'input' || useFlowPhase === 'processing') && (
-                      <div className={`p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center ${isSpecial ? 'bg-[#1a1d24] border border-yellow-500/20' : 'bg-white border border-gray-100'}`}>
+                  <div className={`p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center ${isSpecial ? 'bg-[#1a1d24] border border-yellow-500/20' : 'bg-white border border-gray-100'}`}>
                           <p className={`mb-1 text-sm ${isSpecial ? 'text-teal-400 font-bold' : 'text-teal-600 font-bold'}`}>店舗QRを読み取りました</p>
                           <p className={`text-sm mb-6 ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイントを入力して確定してください</p>
                           <div className="mb-6">
@@ -681,8 +651,7 @@ const CardHome = () => {
                           >
                               別のQRを読み取る
                           </button>
-                      </div>
-                  )}
+                  </div>
               </div>
           </div>
       );
@@ -840,7 +809,8 @@ const CardHome = () => {
           <button 
             onClick={() => {
                 resetUseFlow();
-                setActiveTab('code');
+                setScanOverlayPhase('scanning');
+                setActiveTab('use-scan');
             }}
             className={`p-3 rounded-xl shadow-lg flex flex-col items-center justify-center gap-1.5 transition-transform hover:-translate-y-1 active:scale-95 touch-manipulation ${
                 isSpecial 

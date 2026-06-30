@@ -1,104 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Loader2, QrCode, X } from 'lucide-react';
+import { QrCode, X } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
-import {
-    USE_QR_SESSION_TTL_MS,
-    buildUseSessionQrPayload,
-    isUseSessionExpired,
-    type UseQrSessionRow,
-} from '../../../lib/useQrSession';
+import { buildUseSessionQrPayload } from '../../../lib/useQrSession';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../../lib/qrDisplay';
 
 type StaffUseQrModalProps = {
+    sessionId: string;
     onClose: () => void;
-    onSessionCreated: (sessionId: string) => void;
+    onRegenerate: () => void;
 };
 
-export function StaffUseQrModal({ onClose, onSessionCreated }: StaffUseQrModalProps) {
-    const [sessionId, setSessionId] = useState<string | null>(null);
-    const [session, setSession] = useState<UseQrSessionRow | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const onSessionCreatedRef = useRef(onSessionCreated);
-
-    onSessionCreatedRef.current = onSessionCreated;
-
-    const createSession = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-
-        const { data, error: rpcError } = await supabase.rpc('create_use_qr_session');
-        if (rpcError) {
-            setError(rpcError.message);
-            setLoading(false);
-            return;
-        }
-
-        const id = data as string;
-        setSessionId(id);
-        onSessionCreatedRef.current(id);
-        setSession({
-            id,
-            staff_id: '',
-            status: 'waiting',
-            member_id: null,
-            member_name: null,
-            amount: null,
-            created_at: new Date().toISOString(),
-            expires_at: new Date(Date.now() + USE_QR_SESSION_TTL_MS).toISOString(),
-            completed_at: null,
-        });
-        setLoading(false);
-    }, []);
-
-    useEffect(() => {
-        void createSession();
-        // マウント時に1回だけQRセッションを作成
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => {
-        if (!session?.expires_at || session.status === 'completed' || session.status === 'cancelled') {
-            return;
-        }
-
-        const ms = new Date(session.expires_at).getTime() - Date.now();
-        if (ms <= 0) {
-            setError('QRの有効期限が切れました。新しいQRを発行してください。');
-            return;
-        }
-
-        const timer = window.setTimeout(() => {
-            setError('QRの有効期限が切れました。新しいQRを発行してください。');
-            setSession((prev) => (prev ? { ...prev, status: 'expired' } : prev));
-        }, ms);
-
-        return () => window.clearTimeout(timer);
-    }, [session?.expires_at, session?.status]);
-
-    const qrPayload = useMemo(() => {
-        if (!sessionId) return '';
-        return buildUseSessionQrPayload(sessionId);
-    }, [sessionId]);
+export function StaffUseQrModal({ sessionId, onClose, onRegenerate }: StaffUseQrModalProps) {
+    const qrPayload = useMemo(() => buildUseSessionQrPayload(sessionId), [sessionId]);
 
     const handleCancel = async () => {
-        if (!sessionId) {
-            onClose();
-            return;
-        }
         await supabase.rpc('cancel_use_qr_session', { p_session_id: sessionId });
         onClose();
     };
-
-    const handleRegenerate = () => {
-        void createSession();
-    };
-
-    const isExpired =
-        session?.status === 'expired' ||
-        (session?.expires_at != null && isUseSessionExpired(session.expires_at));
-    const isWaiting = session?.status === 'waiting' && !isExpired;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
@@ -120,79 +39,46 @@ export function StaffUseQrModal({ onClose, onSessionCreated }: StaffUseQrModalPr
                     <p className="text-xs text-gray-500">お客様に読み取ってもらうQRです</p>
                 </div>
 
-                {loading && (
-                    <div className="flex flex-col items-center gap-3 py-12">
-                        <Loader2 className="animate-spin text-teal-500" size={40} />
-                        <p className="text-sm text-gray-500">QRを準備中...</p>
+                <div className="space-y-4">
+                    <div className="rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">
+                        お客様の読取待ち
                     </div>
-                )}
 
-                {!loading && error && (
-                    <div className="space-y-4 py-6">
-                        <p className="text-sm font-bold text-red-600">{error}</p>
+                    <div className="text-[10px] font-bold leading-relaxed text-red-500">
+                        ※このQRコードは1回のみ有効です。
+                        <br />
+                        有効期限: 5分
+                    </div>
+
+                    <div className="inline-block rounded-xl bg-white p-3 shadow-lg">
+                        <QRCodeCanvas
+                            value={qrPayload}
+                            size={QR_CANVAS_SIZE}
+                            bgColor="#ffffff"
+                            fgColor="#000000"
+                            level="H"
+                            includeMargin
+                            style={QR_EARN_CANVAS_STYLE}
+                        />
+                    </div>
+
+                    <div className="flex gap-2">
                         <button
                             type="button"
-                            onClick={handleRegenerate}
-                            className="w-full rounded-xl bg-slate-800 py-3 text-sm font-bold text-white"
+                            onClick={() => void handleCancel()}
+                            className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-600"
                         >
-                            新しいQRを発行
+                            キャンセル
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onRegenerate}
+                            className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700"
+                        >
+                            QRを出し直す
                         </button>
                     </div>
-                )}
-
-                {!loading && !error && session && (
-                    <div className="space-y-4">
-                        <div
-                            className={`rounded-2xl border-2 px-4 py-3 text-sm font-bold ${
-                                isWaiting
-                                    ? 'border-slate-200 bg-slate-50 text-slate-600'
-                                    : 'border-gray-200 bg-gray-50 text-gray-500'
-                            }`}
-                        >
-                            {isWaiting && 'お客様の読取待ち'}
-                            {isExpired && '期限切れ'}
-                        </div>
-
-                        <div className="text-[10px] font-bold leading-relaxed text-red-500">
-                            ※このQRコードは1回のみ有効です。
-                            <br />
-                            有効期限: 5分
-                        </div>
-
-                        <div
-                            className={`inline-block rounded-xl bg-white p-3 shadow-lg transition-all ${
-                                isExpired ? 'opacity-30 grayscale' : ''
-                            }`}
-                        >
-                            <QRCodeCanvas
-                                value={qrPayload}
-                                size={QR_CANVAS_SIZE}
-                                bgColor="#ffffff"
-                                fgColor="#000000"
-                                level="H"
-                                includeMargin
-                                style={QR_EARN_CANVAS_STYLE}
-                            />
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => void handleCancel()}
-                                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-600"
-                            >
-                                キャンセル
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleRegenerate}
-                                className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700"
-                            >
-                                QRを出し直す
-                            </button>
-                        </div>
-                    </div>
-                )}
+                </div>
             </div>
         </div>
     );

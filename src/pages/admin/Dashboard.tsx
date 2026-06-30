@@ -5,6 +5,7 @@ import { Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsI
 import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { StaffUseQrModal } from '../../components/features/card/StaffUseQrModal';
+import { fetchUseQrSessionStatus } from '../../lib/useQrSession';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -39,8 +40,10 @@ const Dashboard = () => {
 
     const [showUseQrModal, setShowUseQrModal] = useState(false);
     const [activeUseSessionId, setActiveUseSessionId] = useState<string | null>(null);
+    const [isUseSessionLoading, setIsUseSessionLoading] = useState(false);
     const [showUseQrSuccess, setShowUseQrSuccess] = useState(false);
     const [useSuccessAmount, setUseSuccessAmount] = useState<number | null>(null);
+    const useCompleteHandledRef = useRef(false);
     const [showApplyScanModal, setShowApplyScanModal] = useState(false);
     const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
     // const [showHistory, setShowHistory] = useState(false); // Removed
@@ -76,9 +79,54 @@ const Dashboard = () => {
         setActiveUseSessionId(null);
     }, []);
 
-    const handleUseSessionCreated = useCallback((id: string) => {
-        setActiveUseSessionId(id);
+    const finishUseQrFlow = useCallback((amount: number) => {
+        if (useCompleteHandledRef.current) return;
+        useCompleteHandledRef.current = true;
+
+        // 発行(EARN)と同じ順番：先にQR画面を閉じる → ポップアップ
+        setShowUseQrModal(false);
+        setActiveUseSessionId(null);
+        setUseSuccessAmount(amount);
+        setShowUseQrSuccess(true);
+        void fetchData();
+
+        window.setTimeout(() => {
+            setShowUseQrSuccess(false);
+            setUseSuccessAmount(null);
+            useCompleteHandledRef.current = false;
+        }, 3000);
     }, []);
+
+    const openUseQrModal = async () => {
+        setIsUseSessionLoading(true);
+        useCompleteHandledRef.current = false;
+
+        const { data, error } = await supabase.rpc('create_use_qr_session');
+        setIsUseSessionLoading(false);
+
+        if (error) {
+            setErrorModal({ show: true, message: error.message });
+            return;
+        }
+
+        setActiveUseSessionId(data as string);
+        setShowUseQrModal(true);
+    };
+
+    const regenerateUseSession = async () => {
+        if (!activeUseSessionId) return;
+
+        await supabase.rpc('cancel_use_qr_session', { p_session_id: activeUseSessionId });
+        useCompleteHandledRef.current = false;
+
+        const { data, error } = await supabase.rpc('create_use_qr_session');
+        if (error) {
+            setErrorModal({ show: true, message: error.message });
+            return;
+        }
+
+        setActiveUseSessionId(data as string);
+    };
 
     // Initial Data Fetch
     useEffect(() => {
@@ -86,13 +134,24 @@ const Dashboard = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [historyLimit]);
 
-    // ポイント使用：発行(EARN)と同じく、取引完了でQRを閉じてからポップアップ
+    // ポイント使用：発行(EARN)と同じく完了時にQRを閉じてポップアップ（Realtime + ポーリング）
     useEffect(() => {
-        if (!activeUseSessionId || !showUseQrModal) return;
+        if (!showUseQrModal || !activeUseSessionId) return;
 
         const sessionId = activeUseSessionId;
 
-        const channel = supabase
+        const pollSession = async () => {
+            try {
+                const row = await fetchUseQrSessionStatus(sessionId);
+                if (row.status === 'completed' && row.amount != null) {
+                    finishUseQrFlow(row.amount);
+                }
+            } catch {
+                /* get_use_qr_session_status 未適用時は transactions 側で検知 */
+            }
+        };
+
+        const txChannel = supabase
             .channel(`use-qr-tx:${sessionId}`)
             .on(
                 'postgres_changes',
@@ -104,26 +163,42 @@ const Dashboard = () => {
                 },
                 (payload: { new: { type?: string; amount?: number } }) => {
                     const tx = payload.new;
-                    if (tx.type !== 'USE') return;
-
-                    setShowUseQrModal(false);
-                    setActiveUseSessionId(null);
-                    setUseSuccessAmount(Number(tx.amount));
-                    setShowUseQrSuccess(true);
-                    void fetchData();
-
-                    window.setTimeout(() => {
-                        setShowUseQrSuccess(false);
-                        setUseSuccessAmount(null);
-                    }, 3000);
+                    if (tx.type !== 'USE' || tx.amount == null) return;
+                    finishUseQrFlow(Number(tx.amount));
                 }
             )
             .subscribe();
 
+        const sessionChannel = supabase
+            .channel(`use-qr-session:${sessionId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'use_qr_sessions',
+                    filter: `id=eq.${sessionId}`,
+                },
+                (payload: { new: { status?: string; amount?: number | null } }) => {
+                    const row = payload.new;
+                    if (row.status === 'completed' && row.amount != null) {
+                        finishUseQrFlow(row.amount);
+                    }
+                }
+            )
+            .subscribe();
+
+        void pollSession();
+        const interval = window.setInterval(() => {
+            void pollSession();
+        }, 1000);
+
         return () => {
-            void supabase.removeChannel(channel);
+            window.clearInterval(interval);
+            void supabase.removeChannel(txChannel);
+            void supabase.removeChannel(sessionChannel);
         };
-    }, [activeUseSessionId, showUseQrModal]);
+    }, [activeUseSessionId, showUseQrModal, finishUseQrFlow]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -461,11 +536,10 @@ const Dashboard = () => {
                         </div>
                     </button>
                     <button 
-                        onClick={() => {
-                            setActiveUseSessionId(null);
-                            setShowUseQrModal(true);
-                        }}
-                        className="flex-1 bg-white text-teal-600 border-2 border-teal-500 font-black text-lg py-4 rounded-2xl shadow-xl shadow-teal-500/10 transition-all active:scale-95 touch-manipulation flex flex-col items-center justify-center gap-2 hover:bg-teal-50"
+                        type="button"
+                        disabled={isUseSessionLoading}
+                        onClick={() => void openUseQrModal()}
+                        className="flex-1 bg-white text-teal-600 border-2 border-teal-500 font-black text-lg py-4 rounded-2xl shadow-xl shadow-teal-500/10 transition-all active:scale-95 touch-manipulation flex flex-col items-center justify-center gap-2 hover:bg-teal-50 disabled:opacity-60"
                     >
                          <div className="bg-teal-50 p-2 rounded-full">
                             <QrCode size={24} />
@@ -800,10 +874,11 @@ const Dashboard = () => {
             </div>
         )}
 
-        {showUseQrModal && (
+        {showUseQrModal && activeUseSessionId && (
             <StaffUseQrModal
+                sessionId={activeUseSessionId}
                 onClose={closeUseQrModal}
-                onSessionCreated={handleUseSessionCreated}
+                onRegenerate={() => void regenerateUseSession()}
             />
         )}
 
