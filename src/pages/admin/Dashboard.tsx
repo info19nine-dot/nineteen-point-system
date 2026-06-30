@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
@@ -73,10 +73,14 @@ const Dashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const isScanProcessing = useRef(false);
 
-    const closeUseQrModal = () => {
+    const closeUseQrModal = useCallback(() => {
         setShowUseQrModal(false);
         setActiveUseSessionId(null);
-    };
+    }, []);
+
+    const handleUseSessionCreated = useCallback((id: string) => {
+        setActiveUseSessionId(id);
+    }, []);
 
     // 読取・完了のどちらかが分かったらQR発行画面は閉じる
     useEffect(() => {
@@ -526,6 +530,7 @@ const Dashboard = () => {
                     </button>
                     <button 
                         onClick={() => {
+                            setPendingUseSession(null);
                             setActiveUseSessionId(null);
                             setShowUseQrModal(true);
                         }}
@@ -867,7 +872,7 @@ const Dashboard = () => {
         {showUseQrModal && (
             <StaffUseQrModal
                 onClose={closeUseQrModal}
-                onSessionCreated={(id) => setActiveUseSessionId(id)}
+                onSessionCreated={handleUseSessionCreated}
             />
         )}
 

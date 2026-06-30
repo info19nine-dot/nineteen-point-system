@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Loader2, QrCode, X } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -20,6 +20,9 @@ export function StaffUseQrModal({ onClose, onSessionCreated }: StaffUseQrModalPr
     const [session, setSession] = useState<UseQrSessionRow | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const onSessionCreatedRef = useRef(onSessionCreated);
+
+    onSessionCreatedRef.current = onSessionCreated;
 
     const createSession = useCallback(async () => {
         setLoading(true);
@@ -34,7 +37,7 @@ export function StaffUseQrModal({ onClose, onSessionCreated }: StaffUseQrModalPr
 
         const id = data as string;
         setSessionId(id);
-        onSessionCreated(id);
+        onSessionCreatedRef.current(id);
         setSession({
             id,
             staff_id: '',
@@ -47,11 +50,13 @@ export function StaffUseQrModal({ onClose, onSessionCreated }: StaffUseQrModalPr
             completed_at: null,
         });
         setLoading(false);
-    }, [onSessionCreated]);
+    }, []);
 
     useEffect(() => {
         void createSession();
-    }, [createSession]);
+        // マウント時に1回だけQRセッションを作成
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (!session?.expires_at || session.status === 'completed' || session.status === 'cancelled') {
