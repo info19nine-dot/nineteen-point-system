@@ -35,4 +35,5 @@
 
 .qr-scanner-host video {
   object-fit: cover;
+  pointer-events: none;
 }

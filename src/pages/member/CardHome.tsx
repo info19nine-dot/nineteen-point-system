@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
@@ -46,6 +46,7 @@ const CardHome = () => {
   // Real Data State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const useScanSessionRef = useRef(0);
 
   // Filtered & Formatted Transactions Logic
   const visibleTransactions = transactions.filter(tx => {
@@ -230,8 +231,17 @@ const CardHome = () => {
   }, [user]);
 
   const closeScanOverlay = () => {
+      setIsSubmitting(false);
       setActiveTab('home');
       setScanOverlayPhase('scanning');
+  };
+
+  const closeUseScanOverlay = () => {
+      useScanSessionRef.current += 1;
+      setIsSubmitting(false);
+      resetUseFlow();
+      setScanOverlayPhase('scanning');
+      setActiveTab('home');
   };
 
   const finishScanSuccess = (amount: number) => {
@@ -334,6 +344,8 @@ const CardHome = () => {
       const sessionId = parseUseSessionQr(text);
       if (!sessionId) return;
 
+      const scanSession = useScanSessionRef.current;
+
       try {
           if (profile?.is_blacklisted) {
               setErrorMode('suspended');
@@ -358,19 +370,24 @@ const CardHome = () => {
 
           if (claimError) throw claimError;
 
+          if (scanSession !== useScanSessionRef.current) return;
+
           setUseSessionId(sessionId);
           setSpendAmount('');
           setScanOverlayPhase('scanning');
           setActiveTab('code');
           setUseFlowPhase('input');
       } catch (e: unknown) {
+          if (scanSession !== useScanSessionRef.current) return;
           console.error('Use session scan error:', e);
           const message = e instanceof Error ? e.message : 'QRの読み取りに失敗しました';
           setActiveModal({ type: 'error', title: 'エラー', message });
           setScanOverlayPhase('scanning');
           setActiveTab('use-scan');
       } finally {
-          setIsSubmitting(false);
+          if (scanSession === useScanSessionRef.current) {
+              setIsSubmitting(false);
+          }
       }
   };
 
@@ -556,11 +573,7 @@ const CardHome = () => {
               hint="店舗のQRを枠のあたりに映してください"
               accent={isSpecial ? 'gold' : 'teal'}
               phase={scanOverlayPhase}
-              onClose={() => {
-                  resetUseFlow();
-                  setScanOverlayPhase('scanning');
-                  setActiveTab('home');
-              }}
+              onClose={closeUseScanOverlay}
               onScan={handleUseSessionScan}
           />
       );
@@ -576,6 +589,7 @@ const CardHome = () => {
               successType="USE"
               successAmount={scanSuccessAmount}
               onClose={() => {
+                  useScanSessionRef.current += 1;
                   resetUseFlow();
                   setActiveTab('home');
               }}
@@ -590,11 +604,9 @@ const CardHome = () => {
               <div className={`p-4 flex justify-between items-center shadow-sm z-10 transition-all ${isSpecial ? 'bg-[#151921] text-white border-b border-white/10' : 'bg-white text-slate-800'}`}>
                   <button
                       type="button"
-                      onClick={() => {
-                          resetUseFlow();
-                          setActiveTab('home');
-                      }}
-                      className={`${isSpecial ? 'text-white hover:bg-white/10 rounded-full p-1' : 'text-slate-800'}`}
+                      onClick={closeUseScanOverlay}
+                      className={`touch-manipulation flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full ${isSpecial ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-gray-100'}`}
+                      aria-label="戻る"
                   >
                       <ChevronLeft size={28} />
                   </button>
@@ -808,6 +820,7 @@ const CardHome = () => {
 
           <button 
             onClick={() => {
+                useScanSessionRef.current += 1;
                 resetUseFlow();
                 setScanOverlayPhase('scanning');
                 setActiveTab('use-scan');

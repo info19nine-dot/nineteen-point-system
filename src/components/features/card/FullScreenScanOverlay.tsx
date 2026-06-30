@@ -31,19 +31,26 @@ export function FullScreenScanOverlay({
     const isScanning = phase === 'scanning';
     const isProcessing = phase === 'processing';
     const isSuccess = phase === 'success';
-    const canClose = isScanning;
     const cameraPaused = !isScanning;
+
+    const handleClose = () => {
+        onClose();
+    };
 
     return (
         <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden bg-black text-white">
-            <div className="absolute top-0 z-30 flex w-full items-center justify-between bg-black/50 p-4">
+            {/* flex配置にしてvideoと重ねない（iOSで戻るが効かない原因） */}
+            <div
+                className="relative z-50 flex shrink-0 items-center justify-between bg-black/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]"
+                style={{ WebkitTransform: 'translateZ(0)' }}
+            >
                 <button
                     type="button"
-                    onClick={onClose}
-                    disabled={!canClose}
-                    className="rounded-full bg-white/20 p-2 transition-colors hover:bg-white/30 disabled:opacity-30"
+                    onClick={handleClose}
+                    className="touch-manipulation flex h-11 w-11 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30 active:bg-white/40"
+                    aria-label="戻る"
                 >
-                    <X size={20} />
+                    <X size={22} />
                 </button>
                 <span className="font-bold drop-shadow-md">
                     {isSuccess
@@ -52,7 +59,7 @@ export function FullScreenScanOverlay({
                             : '受付完了'
                         : title}
                 </span>
-                <div className="w-9" />
+                <div className="w-11" />
             </div>
 
             <div className="relative min-h-0 flex-1">
