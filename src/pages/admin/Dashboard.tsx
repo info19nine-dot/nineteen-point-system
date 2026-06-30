@@ -5,7 +5,7 @@ import { Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsI
 import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { StaffUseQrModal } from '../../components/features/card/StaffUseQrModal';
-import type { UseQrSessionRow } from '../../lib/useQrSession';
+import { fetchUseQrSessionStatus, type UseQrSessionRow, type UseQrSessionStatusResponse } from '../../lib/useQrSession';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -39,6 +39,7 @@ const Dashboard = () => {
     const [servedBy, setServedBy] = useState('');
 
     const [showUseQrModal, setShowUseQrModal] = useState(false);
+    const [activeUseSessionId, setActiveUseSessionId] = useState<string | null>(null);
     const [pendingUseSession, setPendingUseSession] = useState<{ id: string; memberName: string } | null>(null);
     const [showUseQrSuccess, setShowUseQrSuccess] = useState(false);
     const [useSuccessAmount, setUseSuccessAmount] = useState<number | null>(null);
@@ -80,8 +81,61 @@ const Dashboard = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [historyLimit]);
 
+    // QRモーダル表示中：会員の読取を親画面側で監視してモーダルを閉じる
+    useEffect(() => {
+        if (!showUseQrModal || !activeUseSessionId) return;
+
+        const check = async () => {
+            try {
+                const row = await fetchUseQrSessionStatus(activeUseSessionId);
+                if (row.status === 'inputting') {
+                    setShowUseQrModal(false);
+                    setActiveUseSessionId(null);
+                    setPendingUseSession({
+                        id: row.id,
+                        memberName: row.member_name || 'お客様',
+                    });
+                }
+            } catch {
+                /* RPC未適用時などは無視して次のポーリングへ */
+            }
+        };
+
+        void check();
+        const interval = window.setInterval(() => {
+            void check();
+        }, 800);
+
+        return () => window.clearInterval(interval);
+    }, [showUseQrModal, activeUseSessionId]);
+
     useEffect(() => {
         if (!pendingUseSession) return;
+
+        const handleCompleted = (row: UseQrSessionRow | UseQrSessionStatusResponse) => {
+            if (row.status === 'completed' && row.amount != null) {
+                setPendingUseSession(null);
+                setUseSuccessAmount(row.amount);
+                setShowUseQrSuccess(true);
+                void fetchData();
+                window.setTimeout(() => {
+                    setShowUseQrSuccess(false);
+                    setUseSuccessAmount(null);
+                }, 3000);
+            }
+            if (row.status === 'cancelled' || row.status === 'expired') {
+                setPendingUseSession(null);
+            }
+        };
+
+        const poll = async () => {
+            try {
+                const row = await fetchUseQrSessionStatus(pendingUseSession.id);
+                handleCompleted(row);
+            } catch {
+                /* ignore */
+            }
+        };
 
         const channel = supabase
             .channel(`use-qr-pending:${pendingUseSession.id}`)
@@ -94,27 +148,18 @@ const Dashboard = () => {
                     filter: `id=eq.${pendingUseSession.id}`,
                 },
                 (payload: { new: UseQrSessionRow }) => {
-                    const row = payload.new;
-
-                    if (row.status === 'completed' && row.amount != null) {
-                        setPendingUseSession(null);
-                        setUseSuccessAmount(row.amount);
-                        setShowUseQrSuccess(true);
-                        void fetchData();
-                        window.setTimeout(() => {
-                            setShowUseQrSuccess(false);
-                            setUseSuccessAmount(null);
-                        }, 3000);
-                    }
-
-                    if (row.status === 'cancelled' || row.status === 'expired') {
-                        setPendingUseSession(null);
-                    }
+                    handleCompleted(payload.new);
                 }
             )
             .subscribe();
 
+        void poll();
+        const interval = window.setInterval(() => {
+            void poll();
+        }, 1000);
+
         return () => {
+            window.clearInterval(interval);
             void supabase.removeChannel(channel);
         };
     }, [pendingUseSession]);
@@ -462,7 +507,10 @@ const Dashboard = () => {
                         </div>
                     </button>
                     <button 
-                        onClick={() => setShowUseQrModal(true)}
+                        onClick={() => {
+                            setActiveUseSessionId(null);
+                            setShowUseQrModal(true);
+                        }}
                         className="flex-1 bg-white text-teal-600 border-2 border-teal-500 font-black text-lg py-4 rounded-2xl shadow-xl shadow-teal-500/10 transition-all active:scale-95 touch-manipulation flex flex-col items-center justify-center gap-2 hover:bg-teal-50"
                     >
                          <div className="bg-teal-50 p-2 rounded-full">
@@ -800,14 +848,11 @@ const Dashboard = () => {
 
         {showUseQrModal && (
             <StaffUseQrModal
-                onClose={() => setShowUseQrModal(false)}
-                onScanned={(session) => {
-                    setPendingUseSession({
-                        id: session.id,
-                        memberName: session.member_name || 'お客様',
-                    });
+                onClose={() => {
                     setShowUseQrModal(false);
+                    setActiveUseSessionId(null);
                 }}
+                onSessionCreated={(id) => setActiveUseSessionId(id)}
             />
         )}
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Loader2, QrCode, X } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -12,32 +12,18 @@ import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../../lib/qrDisplay';
 
 type StaffUseQrModalProps = {
     onClose: () => void;
-    onScanned?: (session: UseQrSessionRow) => void;
+    onSessionCreated: (sessionId: string) => void;
 };
 
-export function StaffUseQrModal({ onClose, onScanned }: StaffUseQrModalProps) {
+export function StaffUseQrModal({ onClose, onSessionCreated }: StaffUseQrModalProps) {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [session, setSession] = useState<UseQrSessionRow | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const scannedHandledRef = useRef(false);
-    const onCloseRef = useRef(onClose);
-    const onScannedRef = useRef(onScanned);
-
-    onCloseRef.current = onClose;
-    onScannedRef.current = onScanned;
-
-    const handleMemberScanned = useCallback((row: UseQrSessionRow) => {
-        if (scannedHandledRef.current) return;
-        scannedHandledRef.current = true;
-        onScannedRef.current?.(row);
-        onCloseRef.current();
-    }, []);
 
     const createSession = useCallback(async () => {
         setLoading(true);
         setError(null);
-        scannedHandledRef.current = false;
 
         const { data, error: rpcError } = await supabase.rpc('create_use_qr_session');
         if (rpcError) {
@@ -46,9 +32,11 @@ export function StaffUseQrModal({ onClose, onScanned }: StaffUseQrModalProps) {
             return;
         }
 
-        setSessionId(data as string);
+        const id = data as string;
+        setSessionId(id);
+        onSessionCreated(id);
         setSession({
-            id: data as string,
+            id,
             staff_id: '',
             status: 'waiting',
             member_id: null,
@@ -59,65 +47,11 @@ export function StaffUseQrModal({ onClose, onScanned }: StaffUseQrModalProps) {
             completed_at: null,
         });
         setLoading(false);
-    }, []);
+    }, [onSessionCreated]);
 
     useEffect(() => {
         void createSession();
     }, [createSession]);
-
-    useEffect(() => {
-        if (!sessionId) return;
-
-        const channel = supabase
-            .channel(`use-qr-session:${sessionId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'use_qr_sessions',
-                    filter: `id=eq.${sessionId}`,
-                },
-                (payload: { new: UseQrSessionRow }) => {
-                    const row = payload.new;
-                    setSession(row);
-
-                    if (row.status === 'inputting') {
-                        handleMemberScanned(row);
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            void supabase.removeChannel(channel);
-        };
-    }, [sessionId, handleMemberScanned]);
-
-    // Realtime が届かない環境向けにポーリングでも検知
-    useEffect(() => {
-        if (!sessionId || loading) return;
-        if (session?.status !== 'waiting') return;
-
-        const poll = async () => {
-            const { data } = await supabase
-                .from('use_qr_sessions')
-                .select('*')
-                .eq('id', sessionId)
-                .maybeSingle();
-
-            if (data?.status === 'inputting') {
-                handleMemberScanned(data as UseQrSessionRow);
-            }
-        };
-
-        void poll();
-        const interval = window.setInterval(() => {
-            void poll();
-        }, 1000);
-
-        return () => window.clearInterval(interval);
-    }, [sessionId, loading, session?.status, handleMemberScanned]);
 
     useEffect(() => {
         if (!session?.expires_at || session.status === 'completed' || session.status === 'cancelled') {

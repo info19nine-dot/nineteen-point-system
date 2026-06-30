@@ -70,6 +70,7 @@ await checkRpc('create_use_qr_session');
 await checkRpc('claim_use_qr_session');
 await checkRpc('complete_use_qr_session');
 await checkRpc('cancel_use_qr_session');
+await checkRpc('get_use_qr_session_status');
 
 if (failed) {
   console.error('\nSome checks failed. If RPCs are missing, run db_scripts/_latest/*.sql in Supabase SQL Editor.');

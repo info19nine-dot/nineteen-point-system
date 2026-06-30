@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 export const USE_QR_SESSION_TTL_MS = 5 * 60 * 1000;
 
 export type UseQrSessionStatus =
@@ -39,4 +41,19 @@ export function parseUseSessionQr(text: string): string | null {
 
 export function isUseSessionExpired(expiresAt: string): boolean {
     return new Date(expiresAt).getTime() <= Date.now();
+}
+
+export type UseQrSessionStatusResponse = {
+    id: string;
+    status: UseQrSessionStatus;
+    member_name: string | null;
+    amount: number | null;
+};
+
+export async function fetchUseQrSessionStatus(sessionId: string) {
+    const { data, error } = await supabase.rpc('get_use_qr_session_status', {
+        p_session_id: sessionId,
+    });
+    if (error) throw error;
+    return data as UseQrSessionStatusResponse;
 }
