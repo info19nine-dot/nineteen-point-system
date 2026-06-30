@@ -45,6 +45,7 @@ export default defineConfig(() => {
           `${iconBase}/pwa-512x512.png`,
         ],
         manifest: {
+          id: isStaff ? '/staff-pwa' : '/member-pwa',
           name: isStaff ? 'NINE-TEEN Staff' : 'NINE-TEEN',
           short_name: isStaff ? 'N19 Staff' : 'NINE-TEEN',
           description: isStaff
@@ -59,17 +60,19 @@ export default defineConfig(() => {
           lang: 'ja',
           icons: [
             {
-              src: `${iconBase}/pwa-192x192.png`,
+              src: `/${iconBase}/pwa-192x192.png`,
               sizes: '192x192',
               type: 'image/png',
+              purpose: 'any',
             },
             {
-              src: `${iconBase}/pwa-512x512.png`,
+              src: `/${iconBase}/pwa-512x512.png`,
               sizes: '512x512',
               type: 'image/png',
+              purpose: 'any',
             },
             {
-              src: `${iconBase}/pwa-512x512.png`,
+              src: `/${iconBase}/pwa-512x512.png`,
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',

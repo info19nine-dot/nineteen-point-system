@@ -93,21 +93,30 @@ export function PwaInstallHint({
                     <Share size={16} className="mt-0.5 shrink-0" />
                     <span>{iosMessage}</span>
                 </p>
-            ) : deferredPrompt ? (
+            ) : (
                 <div className="space-y-3">
                     <p className="text-xs leading-relaxed">
-                        ホーム画面に追加すると、ブラウザのアドレスバーなしで全画面表示できます。
+                        「インストール」または Chrome 右上の ⋮ から
+                        <strong className="font-bold">「アプリをインストール」</strong>
+                        を選んでください。ショートカットだけだとアイコンが付きません。
                     </p>
-                    <button
-                        type="button"
-                        onClick={() => void install()}
-                        className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white"
-                    >
-                        <Download size={14} />
-                        インストール
-                    </button>
+                    {deferredPrompt ? (
+                        <button
+                            type="button"
+                            onClick={() => void install()}
+                            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white"
+                        >
+                            <Download size={14} />
+                            インストール
+                        </button>
+                    ) : (
+                        <p className="text-xs leading-relaxed text-slate-500">
+                            ボタンが出ない場合は、一度ホーム画面の古いショートカットを削除してから、
+                            このページを開き直してください。
+                        </p>
+                    )}
                 </div>
-            ) : null}
+            )}
         </div>
     );
 }
