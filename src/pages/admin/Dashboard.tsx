@@ -73,6 +73,24 @@ const Dashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const isScanProcessing = useRef(false);
 
+    const closeUseQrModal = () => {
+        setShowUseQrModal(false);
+        setActiveUseSessionId(null);
+    };
+
+    // 読取・完了のどちらかが分かったらQR発行画面は閉じる
+    useEffect(() => {
+        if (pendingUseSession) {
+            closeUseQrModal();
+        }
+    }, [pendingUseSession]);
+
+    useEffect(() => {
+        if (showUseQrSuccess) {
+            closeUseQrModal();
+        }
+    }, [showUseQrSuccess]);
+
 
 
     // Initial Data Fetch
@@ -89,8 +107,7 @@ const Dashboard = () => {
             try {
                 const row = await fetchUseQrSessionStatus(activeUseSessionId);
                 if (row.status === 'inputting') {
-                    setShowUseQrModal(false);
-                    setActiveUseSessionId(null);
+                    closeUseQrModal();
                     setPendingUseSession({
                         id: row.id,
                         memberName: row.member_name || 'お客様',
@@ -114,6 +131,7 @@ const Dashboard = () => {
 
         const handleCompleted = (row: UseQrSessionRow | UseQrSessionStatusResponse) => {
             if (row.status === 'completed' && row.amount != null) {
+                closeUseQrModal();
                 setPendingUseSession(null);
                 setUseSuccessAmount(row.amount);
                 setShowUseQrSuccess(true);
@@ -848,10 +866,7 @@ const Dashboard = () => {
 
         {showUseQrModal && (
             <StaffUseQrModal
-                onClose={() => {
-                    setShowUseQrModal(false);
-                    setActiveUseSessionId(null);
-                }}
+                onClose={closeUseQrModal}
                 onSessionCreated={(id) => setActiveUseSessionId(id)}
             />
         )}
