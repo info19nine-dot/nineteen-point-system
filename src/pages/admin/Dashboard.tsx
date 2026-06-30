@@ -539,7 +539,7 @@ const Dashboard = () => {
 
             {/* Point Grant Card */}
             <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
-                <div className="flex gap-4 mb-4">
+                <div className="mb-4 flex items-start gap-4">
                     <button 
                         onClick={() => {
                             setShowQrModal(true);
