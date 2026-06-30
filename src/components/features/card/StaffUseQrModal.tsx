@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Loader2, QrCode, X } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -20,9 +20,24 @@ export function StaffUseQrModal({ onClose, onScanned }: StaffUseQrModalProps) {
     const [session, setSession] = useState<UseQrSessionRow | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const scannedHandledRef = useRef(false);
+    const onCloseRef = useRef(onClose);
+    const onScannedRef = useRef(onScanned);
+
+    onCloseRef.current = onClose;
+    onScannedRef.current = onScanned;
+
+    const handleMemberScanned = useCallback((row: UseQrSessionRow) => {
+        if (scannedHandledRef.current) return;
+        scannedHandledRef.current = true;
+        onScannedRef.current?.(row);
+        onCloseRef.current();
+    }, []);
+
     const createSession = useCallback(async () => {
         setLoading(true);
         setError(null);
+        scannedHandledRef.current = false;
 
         const { data, error: rpcError } = await supabase.rpc('create_use_qr_session');
         if (rpcError) {
@@ -68,8 +83,7 @@ export function StaffUseQrModal({ onClose, onScanned }: StaffUseQrModalProps) {
                     setSession(row);
 
                     if (row.status === 'inputting') {
-                        onScanned?.(row);
-                        onClose();
+                        handleMemberScanned(row);
                     }
                 }
             )
@@ -78,7 +92,32 @@ export function StaffUseQrModal({ onClose, onScanned }: StaffUseQrModalProps) {
         return () => {
             void supabase.removeChannel(channel);
         };
-    }, [sessionId, onScanned, onClose]);
+    }, [sessionId, handleMemberScanned]);
+
+    // Realtime が届かない環境向けにポーリングでも検知
+    useEffect(() => {
+        if (!sessionId || loading) return;
+        if (session?.status !== 'waiting') return;
+
+        const poll = async () => {
+            const { data } = await supabase
+                .from('use_qr_sessions')
+                .select('*')
+                .eq('id', sessionId)
+                .maybeSingle();
+
+            if (data?.status === 'inputting') {
+                handleMemberScanned(data as UseQrSessionRow);
+            }
+        };
+
+        void poll();
+        const interval = window.setInterval(() => {
+            void poll();
+        }, 1000);
+
+        return () => window.clearInterval(interval);
+    }, [sessionId, loading, session?.status, handleMemberScanned]);
 
     useEffect(() => {
         if (!session?.expires_at || session.status === 'completed' || session.status === 'cancelled') {
