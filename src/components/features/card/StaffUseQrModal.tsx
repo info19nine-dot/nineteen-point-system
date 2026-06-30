@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { CheckCircle2, Loader2, QrCode, X } from 'lucide-react';
+import { Loader2, QrCode, X } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import {
     USE_QR_SESSION_TTL_MS,
@@ -12,22 +12,17 @@ import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../../lib/qrDisplay';
 
 type StaffUseQrModalProps = {
     onClose: () => void;
-    onCompleted?: () => void;
+    onScanned?: (session: UseQrSessionRow) => void;
 };
 
-export function StaffUseQrModal({ onClose, onCompleted }: StaffUseQrModalProps) {
+export function StaffUseQrModal({ onClose, onScanned }: StaffUseQrModalProps) {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [session, setSession] = useState<UseQrSessionRow | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [showSuccess, setShowSuccess] = useState(false);
-    const [successAmount, setSuccessAmount] = useState<number | null>(null);
-
     const createSession = useCallback(async () => {
         setLoading(true);
         setError(null);
-        setShowSuccess(false);
-        setSuccessAmount(null);
 
         const { data, error: rpcError } = await supabase.rpc('create_use_qr_session');
         if (rpcError) {
@@ -72,14 +67,9 @@ export function StaffUseQrModal({ onClose, onCompleted }: StaffUseQrModalProps) 
                     const row = payload.new;
                     setSession(row);
 
-                    if (row.status === 'completed' && row.amount != null) {
-                        setSuccessAmount(row.amount);
-                        setShowSuccess(true);
-                        onCompleted?.();
-                        window.setTimeout(() => {
-                            setShowSuccess(false);
-                            void createSession();
-                        }, 3000);
+                    if (row.status === 'inputting') {
+                        onScanned?.(row);
+                        onClose();
                     }
                 }
             )
@@ -88,7 +78,7 @@ export function StaffUseQrModal({ onClose, onCompleted }: StaffUseQrModalProps) 
         return () => {
             void supabase.removeChannel(channel);
         };
-    }, [sessionId, createSession, onCompleted]);
+    }, [sessionId, onScanned, onClose]);
 
     useEffect(() => {
         if (!session?.expires_at || session.status === 'completed' || session.status === 'cancelled') {
@@ -131,7 +121,6 @@ export function StaffUseQrModal({ onClose, onCompleted }: StaffUseQrModalProps) 
         session?.status === 'expired' ||
         (session?.expires_at != null && isUseSessionExpired(session.expires_at));
     const isWaiting = session?.status === 'waiting' && !isExpired;
-    const isInputting = session?.status === 'inputting' && !isExpired;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
@@ -177,20 +166,12 @@ export function StaffUseQrModal({ onClose, onCompleted }: StaffUseQrModalProps) 
                     <div className="space-y-4">
                         <div
                             className={`rounded-2xl border-2 px-4 py-3 text-sm font-bold ${
-                                isInputting
-                                    ? 'border-teal-400 bg-teal-50 text-teal-700'
-                                    : isWaiting
-                                      ? 'border-slate-200 bg-slate-50 text-slate-600'
-                                      : 'border-gray-200 bg-gray-50 text-gray-500'
+                                isWaiting
+                                    ? 'border-slate-200 bg-slate-50 text-slate-600'
+                                    : 'border-gray-200 bg-gray-50 text-gray-500'
                             }`}
                         >
                             {isWaiting && 'お客様の読取待ち'}
-                            {isInputting && (
-                                <span>
-                                    {session.member_name || 'お客様'}
-                                    <span className="ml-1 font-medium">ポイント入力中…</span>
-                                </span>
-                            )}
                             {isExpired && '期限切れ'}
                         </div>
 
@@ -202,8 +183,8 @@ export function StaffUseQrModal({ onClose, onCompleted }: StaffUseQrModalProps) 
 
                         <div
                             className={`inline-block rounded-xl bg-white p-3 shadow-lg transition-all ${
-                                isInputting ? 'ring-4 ring-teal-100' : ''
-                            } ${isExpired ? 'opacity-30 grayscale' : ''}`}
+                                isExpired ? 'opacity-30 grayscale' : ''
+                            }`}
                         >
                             <QRCodeCanvas
                                 value={qrPayload}
@@ -231,25 +212,6 @@ export function StaffUseQrModal({ onClose, onCompleted }: StaffUseQrModalProps) 
                             >
                                 QRを出し直す
                             </button>
-                        </div>
-                    </div>
-                )}
-
-                {showSuccess && successAmount != null && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[2rem] bg-black/50 backdrop-blur-sm">
-                        <div className="w-[90%] max-w-xs rounded-3xl bg-white p-8 text-center shadow-2xl">
-                            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-orange-100 text-orange-600">
-                                <CheckCircle2 size={48} />
-                            </div>
-                            <h3 className="mb-2 text-2xl font-black text-slate-800">受付完了！</h3>
-                            <p className="mb-4 text-gray-500">ポイント利用を受け付けました。</p>
-                            <div className="rounded-xl border border-gray-100 bg-slate-50 p-4">
-                                <div className="mb-1 text-xs text-gray-400">利用ポイント</div>
-                                <div className="text-3xl font-black text-slate-800">
-                                    -{successAmount.toLocaleString()}
-                                    <span className="ml-1 text-base font-normal text-gray-400">pt</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 )}

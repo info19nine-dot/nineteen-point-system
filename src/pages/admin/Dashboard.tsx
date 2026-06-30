@@ -5,6 +5,7 @@ import { Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsI
 import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { StaffUseQrModal } from '../../components/features/card/StaffUseQrModal';
+import type { UseQrSessionRow } from '../../lib/useQrSession';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -38,6 +39,9 @@ const Dashboard = () => {
     const [servedBy, setServedBy] = useState('');
 
     const [showUseQrModal, setShowUseQrModal] = useState(false);
+    const [pendingUseSession, setPendingUseSession] = useState<{ id: string; memberName: string } | null>(null);
+    const [showUseQrSuccess, setShowUseQrSuccess] = useState(false);
+    const [useSuccessAmount, setUseSuccessAmount] = useState<number | null>(null);
     const [showApplyScanModal, setShowApplyScanModal] = useState(false);
     const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
     // const [showHistory, setShowHistory] = useState(false); // Removed
@@ -75,6 +79,45 @@ const Dashboard = () => {
         fetchData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [historyLimit]);
+
+    useEffect(() => {
+        if (!pendingUseSession) return;
+
+        const channel = supabase
+            .channel(`use-qr-pending:${pendingUseSession.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'use_qr_sessions',
+                    filter: `id=eq.${pendingUseSession.id}`,
+                },
+                (payload: { new: UseQrSessionRow }) => {
+                    const row = payload.new;
+
+                    if (row.status === 'completed' && row.amount != null) {
+                        setPendingUseSession(null);
+                        setUseSuccessAmount(row.amount);
+                        setShowUseQrSuccess(true);
+                        void fetchData();
+                        window.setTimeout(() => {
+                            setShowUseQrSuccess(false);
+                            setUseSuccessAmount(null);
+                        }, 3000);
+                    }
+
+                    if (row.status === 'cancelled' || row.status === 'expired') {
+                        setPendingUseSession(null);
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            void supabase.removeChannel(channel);
+        };
+    }, [pendingUseSession]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -393,6 +436,13 @@ const Dashboard = () => {
         </div>
 
         <main className="max-w-md mx-auto px-6 -mt-12 relative z-20 space-y-3">
+
+            {pendingUseSession && (
+                <div className="rounded-2xl border-2 border-teal-400 bg-teal-50 px-4 py-3 text-center text-sm font-bold text-teal-700 shadow-sm">
+                    {pendingUseSession.memberName}
+                    <span className="ml-1 font-medium">ポイント入力中…</span>
+                </div>
+            )}
 
             {/* Point Grant Card */}
             <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
@@ -751,7 +801,13 @@ const Dashboard = () => {
         {showUseQrModal && (
             <StaffUseQrModal
                 onClose={() => setShowUseQrModal(false)}
-                onCompleted={() => void fetchData()}
+                onScanned={(session) => {
+                    setPendingUseSession({
+                        id: session.id,
+                        memberName: session.member_name || 'お客様',
+                    });
+                    setShowUseQrModal(false);
+                }}
             />
         )}
 
@@ -766,6 +822,25 @@ const Dashboard = () => {
         )}
 
         {/* Full History Overlay */}
+
+        {showUseQrSuccess && useSuccessAmount != null && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
+                <div className="bg-white rounded-3xl p-8 max-w-sm w-[90%] text-center shadow-2xl transform transition-all scale-100">
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-orange-100 text-orange-600">
+                        <CheckCircle2 size={48} />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-800 mb-2">受付完了！</h3>
+                    <p className="text-gray-500 mb-6">ポイント利用を受け付けました。</p>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-gray-100">
+                        <div className="text-xs text-gray-400 mb-1">利用ポイント</div>
+                        <div className="text-3xl font-black text-slate-800">
+                            -{useSuccessAmount.toLocaleString()}{' '}
+                            <span className="text-base font-normal text-gray-400">pt</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {showEarnQrSuccess && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
