@@ -38,10 +38,11 @@ const Dashboard = () => {
     const [servedBy, setServedBy] = useState('');
 
     const [activeUseSessionId, setActiveUseSessionId] = useState<string | null>(null);
-    const [useSessionStatus, setUseSessionStatus] = useState<'loading' | 'waiting' | 'inputting'>('loading');
+    const [useSessionStatus, setUseSessionStatus] = useState<'waiting' | 'inputting'>('waiting');
     const [isUseSessionLoading, setIsUseSessionLoading] = useState(false);
     const useCompleteHandledRef = useRef(false);
     const completedSessionHandledRef = useRef<string | null>(null);
+    const useSessionOpInFlightRef = useRef(false);
     const [showApplyScanModal, setShowApplyScanModal] = useState(false);
     const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
     // const [showHistory, setShowHistory] = useState(false); // Removed
@@ -73,24 +74,29 @@ const Dashboard = () => {
     const isScanProcessing = useRef(false);
 
     const createFreshUseSession = useCallback(async (cancelCurrent: boolean) => {
+        if (useSessionOpInFlightRef.current) return;
+        useSessionOpInFlightRef.current = true;
         setIsUseSessionLoading(true);
 
-        if (cancelCurrent && activeUseSessionId) {
-            await supabase.rpc('cancel_use_qr_session', { p_session_id: activeUseSessionId }).catch(() => {});
+        try {
+            if (cancelCurrent && activeUseSessionId) {
+                await supabase.rpc('cancel_use_qr_session', { p_session_id: activeUseSessionId });
+            }
+
+            const { data, error } = await supabase.rpc('create_use_qr_session');
+            if (error) {
+                setErrorModal({ show: true, message: error.message });
+                return;
+            }
+
+            useCompleteHandledRef.current = false;
+            completedSessionHandledRef.current = null;
+            setActiveUseSessionId(data as string);
+            setUseSessionStatus('waiting');
+        } finally {
+            setIsUseSessionLoading(false);
+            useSessionOpInFlightRef.current = false;
         }
-
-        const { data, error } = await supabase.rpc('create_use_qr_session');
-        setIsUseSessionLoading(false);
-
-        if (error) {
-            setErrorModal({ show: true, message: error.message });
-            return;
-        }
-
-        useCompleteHandledRef.current = false;
-        completedSessionHandledRef.current = null;
-        setActiveUseSessionId(data as string);
-        setUseSessionStatus('waiting');
     }, [activeUseSessionId]);
 
     const finishUseQrFlow = useCallback(() => {
@@ -150,7 +156,7 @@ const Dashboard = () => {
             }
 
             const expired = row.expires_at && new Date(row.expires_at).getTime() <= Date.now();
-            if (expired && (row.status === 'waiting' || row.status === 'inputting')) {
+            if (expired && (row.status === 'waiting' || row.status === 'inputting') && !useSessionOpInFlightRef.current) {
                 void createFreshUseSession(true);
             }
         };
@@ -550,8 +556,9 @@ const Dashboard = () => {
                     </button>
                     <StaffUseQrPanel
                         sessionId={activeUseSessionId}
-                        status={isUseSessionLoading ? 'loading' : useSessionStatus}
-                        isRegenerating={isUseSessionLoading}
+                        status={useSessionStatus}
+                        isInitializing={isUseSessionLoading && !activeUseSessionId}
+                        isRegenerating={isUseSessionLoading && Boolean(activeUseSessionId)}
                         onRegenerate={handleRegenerateUseSession}
                     />
                 </div>

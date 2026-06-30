@@ -2,11 +2,12 @@ import { useMemo } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { buildUseSessionQrPayload } from '../../../lib/useQrSession';
-import { QR_CANVAS_SIZE, QR_USE_INLINE_CANVAS_STYLE } from '../../../lib/qrDisplay';
+import { QR_CANVAS_SIZE, QR_USE_INLINE_CANVAS_STYLE, QR_USE_INLINE_DISPLAY_PX } from '../../../lib/qrDisplay';
 
 type StaffUseQrPanelProps = {
     sessionId: string | null;
-    status: 'loading' | 'waiting' | 'inputting';
+    status: 'waiting' | 'inputting';
+    isInitializing?: boolean;
     isRegenerating?: boolean;
     onRegenerate: () => void;
 };
@@ -14,11 +15,12 @@ type StaffUseQrPanelProps = {
 export function StaffUseQrPanel({
     sessionId,
     status,
+    isInitializing = false,
     isRegenerating = false,
     onRegenerate,
 }: StaffUseQrPanelProps) {
     const qrPayload = useMemo(() => (sessionId ? buildUseSessionQrPayload(sessionId) : ''), [sessionId]);
-    const isLoading = status === 'loading' || !sessionId || isRegenerating;
+    const showQr = Boolean(sessionId) && !isInitializing;
 
     return (
         <div className="relative flex flex-1 touch-manipulation flex-col items-center justify-center rounded-2xl border-2 border-teal-500 bg-white py-4 shadow-xl shadow-teal-500/10 transition-all active:scale-95">
@@ -28,10 +30,15 @@ export function StaffUseQrPanel({
                 </span>
             )}
 
-            <div className="relative">
-                {isLoading ? (
-                    <Loader2 className="animate-spin text-teal-500" size={40} />
-                ) : (
+            <div
+                className="relative shrink-0"
+                style={{ width: QR_USE_INLINE_DISPLAY_PX, height: QR_USE_INLINE_DISPLAY_PX }}
+            >
+                {isInitializing ? (
+                    <div className="flex h-full w-full items-center justify-center">
+                        <Loader2 className="animate-spin text-teal-500" size={40} />
+                    </div>
+                ) : showQr ? (
                     <QRCodeCanvas
                         value={qrPayload}
                         size={QR_CANVAS_SIZE}
@@ -39,19 +46,24 @@ export function StaffUseQrPanel({
                         fgColor="#000000"
                         level="H"
                         includeMargin
-                        style={QR_USE_INLINE_CANVAS_STYLE}
+                        style={{
+                            ...QR_USE_INLINE_CANVAS_STYLE,
+                            opacity: isRegenerating ? 0.35 : 1,
+                        }}
                     />
-                )}
+                ) : null}
 
-                <button
-                    type="button"
-                    onClick={onRegenerate}
-                    disabled={isLoading}
-                    aria-label="QRを出し直す"
-                    className="absolute -right-1 -top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-teal-200 bg-white text-teal-600 shadow-sm transition-colors hover:bg-teal-50 active:scale-95 disabled:opacity-40"
-                >
-                    <RefreshCw size={14} />
-                </button>
+                {sessionId && (
+                    <button
+                        type="button"
+                        onClick={onRegenerate}
+                        disabled={isInitializing || isRegenerating}
+                        aria-label="QRを出し直す"
+                        className="absolute -right-1 -top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-teal-200 bg-white text-teal-600 shadow-sm transition-colors hover:bg-teal-50 active:scale-95 disabled:opacity-60"
+                    >
+                        <RefreshCw size={14} className={isRegenerating ? 'animate-spin' : ''} />
+                    </button>
+                )}
             </div>
         </div>
     );
