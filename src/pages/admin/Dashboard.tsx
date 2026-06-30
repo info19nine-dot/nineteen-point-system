@@ -4,8 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
-import { StaffUseQrModal } from '../../components/features/card/StaffUseQrModal';
-import { fetchUseQrSessionStatus } from '../../lib/useQrSession';
+import { StaffUseQrPanel } from '../../components/features/card/StaffUseQrPanel';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -38,12 +37,11 @@ const Dashboard = () => {
     const [qrId, setQrId] = useState<string>(crypto.randomUUID());
     const [servedBy, setServedBy] = useState('');
 
-    const [showUseQrModal, setShowUseQrModal] = useState(false);
     const [activeUseSessionId, setActiveUseSessionId] = useState<string | null>(null);
+    const [useSessionStatus, setUseSessionStatus] = useState<'loading' | 'waiting' | 'inputting'>('loading');
     const [isUseSessionLoading, setIsUseSessionLoading] = useState(false);
-    const [showUseQrSuccess, setShowUseQrSuccess] = useState(false);
-    const [useSuccessAmount, setUseSuccessAmount] = useState<number | null>(null);
     const useCompleteHandledRef = useRef(false);
+    const completedSessionHandledRef = useRef<string | null>(null);
     const [showApplyScanModal, setShowApplyScanModal] = useState(false);
     const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
     // const [showHistory, setShowHistory] = useState(false); // Removed
@@ -74,32 +72,12 @@ const Dashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const isScanProcessing = useRef(false);
 
-    const closeUseQrModal = useCallback(() => {
-        setShowUseQrModal(false);
-        setActiveUseSessionId(null);
-    }, []);
-
-    const finishUseQrFlow = useCallback((amount: number) => {
-        if (useCompleteHandledRef.current) return;
-        useCompleteHandledRef.current = true;
-
-        // 発行(EARN)と同じ順番：先にQR画面を閉じる → ポップアップ
-        setShowUseQrModal(false);
-        setActiveUseSessionId(null);
-        setUseSuccessAmount(amount);
-        setShowUseQrSuccess(true);
-        void fetchData();
-
-        window.setTimeout(() => {
-            setShowUseQrSuccess(false);
-            setUseSuccessAmount(null);
-            useCompleteHandledRef.current = false;
-        }, 3000);
-    }, []);
-
-    const openUseQrModal = async () => {
+    const createFreshUseSession = useCallback(async (cancelCurrent: boolean) => {
         setIsUseSessionLoading(true);
-        useCompleteHandledRef.current = false;
+
+        if (cancelCurrent && activeUseSessionId) {
+            await supabase.rpc('cancel_use_qr_session', { p_session_id: activeUseSessionId }).catch(() => {});
+        }
 
         const { data, error } = await supabase.rpc('create_use_qr_session');
         setIsUseSessionLoading(false);
@@ -109,24 +87,32 @@ const Dashboard = () => {
             return;
         }
 
-        setActiveUseSessionId(data as string);
-        setShowUseQrModal(true);
-    };
-
-    const regenerateUseSession = async () => {
-        if (!activeUseSessionId) return;
-
-        await supabase.rpc('cancel_use_qr_session', { p_session_id: activeUseSessionId });
         useCompleteHandledRef.current = false;
-
-        const { data, error } = await supabase.rpc('create_use_qr_session');
-        if (error) {
-            setErrorModal({ show: true, message: error.message });
-            return;
-        }
-
+        completedSessionHandledRef.current = null;
         setActiveUseSessionId(data as string);
+        setUseSessionStatus('waiting');
+    }, [activeUseSessionId]);
+
+    const finishUseQrFlow = useCallback(() => {
+        if (useCompleteHandledRef.current) return;
+        useCompleteHandledRef.current = true;
+
+        void fetchData();
+        void createFreshUseSession(false).finally(() => {
+            useCompleteHandledRef.current = false;
+        });
+    }, [createFreshUseSession]);
+
+    const handleRegenerateUseSession = () => {
+        void createFreshUseSession(true);
     };
+
+    // ダッシュボード表示時に使用QRを常時用意
+    useEffect(() => {
+        if (activeUseSessionId) return;
+        void createFreshUseSession(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -134,20 +120,38 @@ const Dashboard = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [historyLimit]);
 
-    // ポイント使用：発行(EARN)と同じく完了時にQRを閉じてポップアップ（Realtime + ポーリング）
+    // ポイント使用QR：状態監視・完了時に新QRへ（Realtime + ポーリング）
     useEffect(() => {
-        if (!showUseQrModal || !activeUseSessionId) return;
+        if (!activeUseSessionId) return;
 
         const sessionId = activeUseSessionId;
 
-        const pollSession = async () => {
-            try {
-                const row = await fetchUseQrSessionStatus(sessionId);
-                if (row.status === 'completed' && row.amount != null) {
-                    finishUseQrFlow(row.amount);
+        const syncSession = async () => {
+            const { data: row, error } = await supabase
+                .from('use_qr_sessions')
+                .select('status, amount, expires_at')
+                .eq('id', sessionId)
+                .maybeSingle();
+
+            if (error || !row) return;
+
+            if (row.status === 'inputting') {
+                setUseSessionStatus('inputting');
+            } else if (row.status === 'waiting') {
+                setUseSessionStatus('waiting');
+            }
+
+            if (row.status === 'completed' && row.amount != null) {
+                if (completedSessionHandledRef.current !== sessionId) {
+                    completedSessionHandledRef.current = sessionId;
+                    finishUseQrFlow();
                 }
-            } catch {
-                /* get_use_qr_session_status 未適用時は transactions 側で検知 */
+                return;
+            }
+
+            const expired = row.expires_at && new Date(row.expires_at).getTime() <= Date.now();
+            if (expired && (row.status === 'waiting' || row.status === 'inputting')) {
+                void createFreshUseSession(true);
             }
         };
 
@@ -164,7 +168,7 @@ const Dashboard = () => {
                 (payload: { new: { type?: string; amount?: number } }) => {
                     const tx = payload.new;
                     if (tx.type !== 'USE' || tx.amount == null) return;
-                    finishUseQrFlow(Number(tx.amount));
+                    finishUseQrFlow();
                 }
             )
             .subscribe();
@@ -181,16 +185,25 @@ const Dashboard = () => {
                 },
                 (payload: { new: { status?: string; amount?: number | null } }) => {
                     const row = payload.new;
+                    if (row.status === 'inputting') {
+                        setUseSessionStatus('inputting');
+                    }
+                    if (row.status === 'waiting') {
+                        setUseSessionStatus('waiting');
+                    }
                     if (row.status === 'completed' && row.amount != null) {
-                        finishUseQrFlow(row.amount);
+                        if (completedSessionHandledRef.current !== sessionId) {
+                            completedSessionHandledRef.current = sessionId;
+                            finishUseQrFlow();
+                        }
                     }
                 }
             )
             .subscribe();
 
-        void pollSession();
+        void syncSession();
         const interval = window.setInterval(() => {
-            void pollSession();
+            void syncSession();
         }, 1000);
 
         return () => {
@@ -198,7 +211,7 @@ const Dashboard = () => {
             void supabase.removeChannel(txChannel);
             void supabase.removeChannel(sessionChannel);
         };
-    }, [activeUseSessionId, showUseQrModal, finishUseQrFlow]);
+    }, [activeUseSessionId, finishUseQrFlow, createFreshUseSession]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -535,20 +548,12 @@ const Dashboard = () => {
                             <span className="text-lg">発行</span>
                         </div>
                     </button>
-                    <button 
-                        type="button"
-                        disabled={isUseSessionLoading}
-                        onClick={() => void openUseQrModal()}
-                        className="flex-1 bg-white text-teal-600 border-2 border-teal-500 font-black text-lg py-4 rounded-2xl shadow-xl shadow-teal-500/10 transition-all active:scale-95 touch-manipulation flex flex-col items-center justify-center gap-2 hover:bg-teal-50 disabled:opacity-60"
-                    >
-                         <div className="bg-teal-50 p-2 rounded-full">
-                            <QrCode size={24} />
-                        </div>
-                        <div className="font-bold text-center leading-tight">
-                            <span className="block text-sm text-slate-500 mb-0.5">ポイント</span>
-                            <span className="text-lg">使用</span>
-                        </div>
-                    </button>
+                    <StaffUseQrPanel
+                        sessionId={activeUseSessionId}
+                        status={isUseSessionLoading ? 'loading' : useSessionStatus}
+                        isRegenerating={isUseSessionLoading}
+                        onRegenerate={handleRegenerateUseSession}
+                    />
                 </div>
                 <button
                     type="button"
@@ -874,14 +879,6 @@ const Dashboard = () => {
             </div>
         )}
 
-        {showUseQrModal && activeUseSessionId && (
-            <StaffUseQrModal
-                sessionId={activeUseSessionId}
-                onClose={closeUseQrModal}
-                onRegenerate={() => void regenerateUseSession()}
-            />
-        )}
-
         {showApplyScanModal && (
             <FullScreenScanOverlay
                 title="特別会員申請"
@@ -893,25 +890,6 @@ const Dashboard = () => {
         )}
 
         {/* Full History Overlay */}
-
-        {showUseQrSuccess && useSuccessAmount != null && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
-                <div className="bg-white rounded-3xl p-8 max-w-sm w-[90%] text-center shadow-2xl transform transition-all scale-100">
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-orange-100 text-orange-600">
-                        <CheckCircle2 size={48} />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-800 mb-2">受付完了！</h3>
-                    <p className="text-gray-500 mb-6">ポイント利用を受け付けました。</p>
-                    <div className="bg-slate-50 p-4 rounded-xl border border-gray-100">
-                        <div className="text-xs text-gray-400 mb-1">利用ポイント</div>
-                        <div className="text-3xl font-black text-slate-800">
-                            -{useSuccessAmount.toLocaleString()}{' '}
-                            <span className="text-base font-normal text-gray-400">pt</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
 
         {showEarnQrSuccess && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">

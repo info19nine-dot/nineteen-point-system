@@ -1,6 +1,11 @@
 import { supabase } from './supabaseClient';
 
-export const USE_QR_SESSION_TTL_MS = 5 * 60 * 1000;
+/** 読取待ち（誰も読んでいない） */
+export const USE_QR_WAITING_TTL_MS = 10 * 60 * 1000;
+/** 入力中（会員が読み取ったあと） */
+export const USE_QR_INPUTTING_TTL_MS = 2 * 60 * 1000;
+/** @deprecated USE_QR_WAITING_TTL_MS を使用 */
+export const USE_QR_SESSION_TTL_MS = USE_QR_WAITING_TTL_MS;
 
 export type UseQrSessionStatus =
     | 'waiting'
