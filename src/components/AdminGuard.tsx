@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { STAFF_LOGIN_PATH } from '../lib/routes';
+import { isStaffApp } from '../lib/appMode';
 import { Loader2 } from 'lucide-react';
 
 export const AdminGuard = ({ children }: { children: React.ReactNode }) => {
@@ -34,7 +35,7 @@ export const AdminGuard = ({ children }: { children: React.ReactNode }) => {
             setIsAuthorized(true);
         } else {
             setIsAuthorized(false);
-            navigate('/card', { replace: true });
+            navigate(isStaffApp ? STAFF_LOGIN_PATH : '/card', { replace: true });
         }
     }, [session, loading, isAdmin, profile, navigate, refreshProfile]);
 

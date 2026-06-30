@@ -1,67 +1,104 @@
-﻿import { defineConfig } from 'vite'
+﻿import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 import fs from 'node:fs'
 
-export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
-      manifest: {
-        name: 'NINE-TEEN',
-        short_name: 'NINE-TEEN',
-        description: 'NINE-TEEN ポイントカードアプリ',
-        theme_color: '#000000',
-        background_color: '#000000',
-        display: 'standalone',
-        orientation: 'portrait-primary',
-        scope: '/',
-        start_url: '/login',
-        lang: 'ja',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
+type BuildMode = 'member' | 'staff'
+
+function getBuildMode(): BuildMode {
+  return process.env.VITE_APP_MODE === 'staff' ? 'staff' : 'member'
+}
+
+function htmlTransformPlugin(mode: BuildMode): Plugin {
+  const isStaff = mode === 'staff'
+  const iconBase = `/icons/${mode}`
+  const themeColor = isStaff ? '#ffffff' : '#000000'
+  const title = isStaff ? 'NINE-TEEN Staff' : 'NINE-TEEN'
+
+  return {
+    name: 'html-transform',
+    transformIndexHtml(html) {
+      return html
+        .replace(/__APP_TITLE__/g, title)
+        .replace(/__THEME_COLOR__/g, themeColor)
+        .replace(/__APPLE_ICON__/g, `${iconBase}/apple-touch-icon.png`)
+        .replace(/__FAVICON__/g, `${iconBase}/pwa-192x192.png`)
+    },
+  }
+}
+
+export default defineConfig(() => {
+  const mode = getBuildMode()
+  const isStaff = mode === 'staff'
+  const iconBase = `icons/${mode}`
+
+  return {
+    plugins: [
+      react(),
+      htmlTransformPlugin(mode),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: [
+          `${iconBase}/apple-touch-icon.png`,
+          `${iconBase}/pwa-192x192.png`,
+          `${iconBase}/pwa-512x512.png`,
         ],
+        manifest: {
+          name: isStaff ? 'NINE-TEEN Staff' : 'NINE-TEEN',
+          short_name: isStaff ? 'N19 Staff' : 'NINE-TEEN',
+          description: isStaff
+            ? 'NINE-TEEN スタッフ用アプリ'
+            : 'NINE-TEEN ポイントカードアプリ',
+          theme_color: isStaff ? '#ffffff' : '#000000',
+          background_color: isStaff ? '#ffffff' : '#000000',
+          display: 'standalone',
+          orientation: 'portrait-primary',
+          scope: '/',
+          start_url: isStaff ? '/portal/staff' : '/login',
+          lang: 'ja',
+          icons: [
+            {
+              src: `${iconBase}/pwa-192x192.png`,
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: `${iconBase}/pwa-512x512.png`,
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: `${iconBase}/pwa-512x512.png`,
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          navigateFallback: '/index.html',
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+              handler: 'NetworkOnly',
+            },
+          ],
+        },
+      }),
+      {
+        name: 'spa-fallback',
+        closeBundle() {
+          const dist = path.resolve(__dirname, 'dist')
+          fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'))
+        },
       },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        navigateFallback: '/index.html',
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkOnly',
-          },
-        ],
-      },
-    }),
-    {
-      name: 'spa-fallback',
-      closeBundle() {
-        const dist = path.resolve(__dirname, 'dist')
-        fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'))
+    ],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
       },
     },
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+  }
 })

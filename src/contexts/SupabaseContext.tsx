@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { supabase } from '../lib/supabaseClient';
 import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import { DEFAULT_LOGOUT_PATH } from '../lib/appMode';
 
 type Profile = {
   id: string;
@@ -53,7 +54,7 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
       } else if (data) {
         if (data.is_blacklisted || data.is_deleted) {
           await supabase.auth.signOut();
-          navigate('/login', {
+          navigate(DEFAULT_LOGOUT_PATH, {
             replace: true,
             state: {
               suspended: true,
@@ -130,7 +131,7 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
               supabase.auth.signOut().then(() => {
                   // Redirect via Router instead of window.location to prevent white screen
                   // Pass state to Login page to show Modal
-                  navigate('/login', { 
+                  navigate(DEFAULT_LOGOUT_PATH, { 
                     replace: true, 
                     state: { 
                       suspended: true, 
@@ -160,7 +161,7 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setProfile(null);
     if (options?.redirectTo !== null) {
-      navigate(options?.redirectTo ?? '/login');
+      navigate(options?.redirectTo ?? DEFAULT_LOGOUT_PATH);
     }
   };
 

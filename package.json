@@ -3,8 +3,12 @@
     "name": "loyalty-app",
     "scripts": {
         "preview": "vite preview",
-        "build": "tsc -b && vite build",
+        "build": "npm run build:member",
+        "build:member": "tsc -b && cross-env VITE_APP_MODE=member vite build",
+        "build:staff": "tsc -b && cross-env VITE_APP_MODE=staff vite build",
         "dev": "vite",
+        "dev:member": "vite",
+        "dev:staff": "cross-env VITE_APP_MODE=staff vite",
         "lint": "eslint .",
         "verify:supabase": "node scripts/verify-supabase.mjs",
         "setup:staff-n19": "node scripts/setup-staff-n19.mjs"
@@ -14,6 +18,7 @@
         "@types/react-dom": "^18.3.0",
         "@vitejs/plugin-react": "^4.3.1",
         "autoprefixer": "^10.4.20",
+        "cross-env": "^10.1.0",
         "postcss": "^8.4.41",
         "tailwindcss": "^3.4.10",
         "typescript": "^5.5.3",
