@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
-import { Scan, Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
+import { Search, QrCode, X, Check, History, PenTool, Plus, Settings as SettingsIcon, CheckCircle2, ShieldCheck, AlertCircle, HelpCircle } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
+import { StaffUseQrModal } from '../../components/features/card/StaffUseQrModal';
 import { STAFF_MODE_SELECT_PATH } from '../../lib/routes';
 import { QR_CANVAS_SIZE, QR_EARN_CANVAS_STYLE } from '../../lib/qrDisplay';
 
@@ -36,13 +37,13 @@ const Dashboard = () => {
     const [qrId, setQrId] = useState<string>(crypto.randomUUID());
     const [servedBy, setServedBy] = useState('');
 
-    const [showScanModal, setShowScanModal] = useState(false);
+    const [showUseQrModal, setShowUseQrModal] = useState(false);
+    const [showApplyScanModal, setShowApplyScanModal] = useState(false);
     const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
     // const [showHistory, setShowHistory] = useState(false); // Removed
     const [historyLimit, setHistoryLimit] = useState(5);
     
 
-    const [successType, setSuccessType] = useState<'EARN' | 'USE'>('USE');
     const [showEarnQrSuccess, setShowEarnQrSuccess] = useState(false);
     const [scanResultData, setScanResultData] = useState<any>(null);
     const [searchValue, setSearchValue] = useState('');
@@ -134,150 +135,56 @@ const Dashboard = () => {
         }
     };
 
-    const closeScanOverlay = () => {
-        setShowScanModal(false);
+    const closeApplyScanOverlay = () => {
+        setShowApplyScanModal(false);
         setScanOverlayPhase('scanning');
         setScanResultData(null);
     };
 
-    const finishScanSuccess = (type: 'EARN' | 'USE', data: { amount: number }) => {
-        setScanResultData(data);
-        setSuccessType(type);
-        setScanOverlayPhase('success');
-        window.setTimeout(() => {
-            void fetchData();
-        }, 150);
-        window.setTimeout(() => {
-            closeScanOverlay();
-        }, 3000);
-    };
-
-
-
     // ------------------------------------------------------------------
-    // QR Code Scanning Logic (Staff scans Member to USE points)
+    // 特別会員申請QRのみスタッフが読み取る
     // ------------------------------------------------------------------
-    const handleScanResult = async (text: string) => {
+    const handleApplyScanResult = async (text: string) => {
         if (scanOverlayPhase !== 'scanning' || isScanProcessing.current) return;
         if (!text) return;
 
         try {
-                isScanProcessing.current = true;
-                // Parse JSON
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch {
-                    return;
-                }
-
-                console.log("Scanned Data:", data);
-
-                // Validate Data Structure
-                // Accepted formats: 
-                // 1. { type: 'USE', amount: 500, memberId: '...', ... } (New Plan)
-                // 2. { type: 'use_points', userId: '...', amount: ... } (Current Member App - CardHome.tsx)
-                
-                const type = data.type;
-                const memberId = data.memberId || data.userId;
-                const amount = Number(data.amount);
-
-                // --- NEW: SPECIAL MEMBER APPLICATION ---
-                if (type === 'APPLY') {
-                     closeScanOverlay();
-                     // Fetch Profile using memberId
-                     const { data: profile, error: pError } = await supabase
-                         .from('profiles')
-                         .select('*')
-                         .eq('id', memberId)
-                         .single();
-                     
-                     
-                     if (pError || !profile) {
-                         setErrorModal({show: true, message: "会員情報の取得に失敗しました"});
-                         // alert("会員情報の取得に失敗しました");
-                         return;
-                     }
-                     
-                     setApprovalData(profile);
-                     setShowApprovalModal(true);
-                     return;
-                }
-                // ---------------------------------------
-
-                if ((type !== 'USE' && type !== 'use_points' && type !== 'EARN') || !memberId || !amount) {
-                    return;
-                }
-
-                setScanOverlayPhase('processing');
-                setScanResultData(data);
-                
-                // 1. Check Balance & Status
-                const { data: member, error: memberError } = await supabase
-                    .from('profiles')
-                    .select('points, is_blacklisted, is_deleted')
-                    .eq('id', memberId)
-                    .single();
-
-                if (memberError || !member) throw new Error("会員情報の取得失敗");
-                
-                // Check Status
-                if (member.is_blacklisted) {
-                    setErrorModal({show: true, message: "この会員は利用停止中のため、ポイント利用はできません。"});
-                    closeScanOverlay();
-                    return;
-                }
-                if (member.is_deleted) {
-                    setErrorModal({show: true, message: "この会員は削除済みのため、利用できません。"});
-                    closeScanOverlay();
-                    return;
-                }
-
-                // --- HANDLE EARN ---
-                if (type === 'EARN') {
-                    const { error: rpcError } = await supabase.rpc('execute_point_transaction', {
-                        p_amount: amount,
-                        p_description: data.description || 'Course QR: ' + (data.courseName || 'Store Scan'),
-                        p_type: 'EARN',
-                        p_target_member_id: memberId,
-                        p_qr_id: data.qrId || null,
-                        p_served_by: data.servedBy || null,
-                    });
-
-                    if (rpcError) throw rpcError;
-
-                    finishScanSuccess('EARN', data);
-                    return;
-                }
-                // ------------------
-                
-                // Check if user has enough points
-                if (member.points < amount) {
-                    setErrorModal({show: true, message: `ポイント不足です (残高: ${member.points}pt)`});
-                    closeScanOverlay();
-                    return;
-                }
-
-                // 2. Execute via RPC (trigger updates points)
-                const { error: rpcError } = await supabase.rpc('execute_point_transaction', {
-                    p_amount: amount,
-                    p_description: 'ポイント利用',
-                    p_type: 'USE',
-                    p_target_member_id: memberId,
-                });
-
-                if (rpcError) throw rpcError;
-
-                finishScanSuccess('USE', data);
-
-            } catch (err) {
-                console.error("Scan/Transaction Error:", err);
-                const errorMsg = (err as any).message || '不明なエラー';
-                setErrorModal({show: true, message: `処理に失敗しました。\n詳細: ${errorMsg}`});
-                closeScanOverlay();
-            } finally {
-                isScanProcessing.current = false;
+            isScanProcessing.current = true;
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                return;
             }
+
+            if (data.type !== 'APPLY') return;
+
+            const memberId = data.memberId || data.userId;
+            if (!memberId) return;
+
+            closeApplyScanOverlay();
+
+            const { data: profile, error: pError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', memberId)
+                .single();
+
+            if (pError || !profile) {
+                setErrorModal({ show: true, message: '会員情報の取得に失敗しました' });
+                return;
+            }
+
+            setApprovalData(profile);
+            setShowApprovalModal(true);
+        } catch (err) {
+            console.error('Apply Scan Error:', err);
+            const errorMsg = (err as Error).message || '不明なエラー';
+            setErrorModal({ show: true, message: `処理に失敗しました。\n詳細: ${errorMsg}` });
+            closeApplyScanOverlay();
+        } finally {
+            isScanProcessing.current = false;
+        }
     };
 
 
@@ -340,7 +247,6 @@ const Dashboard = () => {
                     
                     // Show Success Popup
                     setScanResultData({ amount: tx.amount }); 
-                    setSuccessType('EARN');
                     setShowEarnQrSuccess(true);
                     
                     // Reset QR state under the hood
@@ -506,21 +412,28 @@ const Dashboard = () => {
                         </div>
                     </button>
                     <button 
-                        onClick={() => {
-                            setScanOverlayPhase('scanning');
-                            setShowScanModal(true);
-                        }}
+                        onClick={() => setShowUseQrModal(true)}
                         className="flex-1 bg-white text-teal-600 border-2 border-teal-500 font-black text-lg py-4 rounded-2xl shadow-xl shadow-teal-500/10 transition-all active:scale-95 touch-manipulation flex flex-col items-center justify-center gap-2 hover:bg-teal-50"
                     >
                          <div className="bg-teal-50 p-2 rounded-full">
-                            <Scan size={24} />
+                            <QrCode size={24} />
                         </div>
                         <div className="font-bold text-center leading-tight">
                             <span className="block text-sm text-slate-500 mb-0.5">ポイント</span>
-                            <span className="text-lg">読み取り</span>
+                            <span className="text-lg">使用</span>
                         </div>
                     </button>
                 </div>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setScanOverlayPhase('scanning');
+                        setShowApplyScanModal(true);
+                    }}
+                    className="mt-3 w-full text-center text-xs font-bold text-slate-400 underline-offset-2 hover:text-teal-600 hover:underline"
+                >
+                    特別会員申請QRを読み取る
+                </button>
             </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div className="flex items-center gap-2 mb-4">
@@ -835,15 +748,20 @@ const Dashboard = () => {
             </div>
         )}
 
-        {showScanModal && (
+        {showUseQrModal && (
+            <StaffUseQrModal
+                onClose={() => setShowUseQrModal(false)}
+                onCompleted={() => void fetchData()}
+            />
+        )}
+
+        {showApplyScanModal && (
             <FullScreenScanOverlay
-                title="ポイント消化"
-                hint="会員のQRを枠のあたりに映してください"
+                title="特別会員申請"
+                hint="会員の申請QRを枠のあたりに映してください"
                 phase={scanOverlayPhase}
-                successType={successType}
-                successAmount={scanResultData?.amount != null ? Number(scanResultData.amount) : undefined}
-                onClose={closeScanOverlay}
-                onScan={handleScanResult}
+                onClose={closeApplyScanOverlay}
+                onScan={handleApplyScanResult}
             />
         )}
 

@@ -3,9 +3,8 @@ import { useSupabase } from '../../contexts/SupabaseContext';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Scan, QrCode, ChevronLeft, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
-import { QRCodeCanvas } from 'qrcode.react';
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
-import { QR_CANVAS_SIZE, QR_USE_CANVAS_STYLE, QR_USE_DISPLAY_PX } from '../../lib/qrDisplay';
+import { parseUseSessionQr } from '../../lib/useQrSession';
 import { Skeleton } from '../../components/ui/skeleton';
 
 // 取引履歴の型定義
@@ -30,14 +29,15 @@ const CardHome = () => {
   const { user, profile, loading: authLoading } = useSupabase();
   const navigate = useNavigate();
   const [spendAmount, setSpendAmount] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'home' | 'scan' | 'code' | 'history'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'scan' | 'code' | 'use-scan' | 'history'>('home');
   
   const isSpecial = profile?.rank === 'special'; // Helper const
   
   const [successMode, setSuccessMode] = useState<'none' | 'pay'>('none');
   const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
   const [scanSuccessAmount, setScanSuccessAmount] = useState<number | undefined>();
-  const [isQrConfirmed, setIsQrConfirmed] = useState(false);
+  const [useSessionId, setUseSessionId] = useState<string | null>(null);
+  const [useFlowPhase, setUseFlowPhase] = useState<'scan' | 'input' | 'processing' | 'success'>('scan');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMode, setErrorMode] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<ActiveModal | null>(null); // Replaces generalError
@@ -310,10 +310,104 @@ const CardHome = () => {
       }
   };
 
-  const handleConfirmAmount = () => {
-    if (!spendAmount || Number(spendAmount) <= 0) return setActiveModal({ type: 'error', title: '入力エラー', message: "利用ポイントを入力してください" });
-    if (Number(spendAmount) > (profile?.points || 0)) return setActiveModal({ type: 'error', title: '残高不足', message: "ポイント不足です" });
-    setIsQrConfirmed(true);
+  const resetUseFlow = () => {
+      setUseSessionId(null);
+      setSpendAmount('');
+      setUseFlowPhase('scan');
+  };
+
+  const finishUseSuccess = (amount: number) => {
+      setScanSuccessAmount(amount);
+      setUseFlowPhase('success');
+      window.setTimeout(() => {
+          void fetchHistory();
+      }, 150);
+      window.setTimeout(() => {
+          resetUseFlow();
+          setActiveTab('home');
+      }, 3000);
+  };
+
+  const handleUseSessionScan = async (text: string) => {
+      if (useFlowPhase !== 'scan' || isSubmitting) return;
+
+      const sessionId = parseUseSessionQr(text);
+      if (!sessionId) return;
+
+      try {
+          if (profile?.is_blacklisted) {
+              setErrorMode('suspended');
+              setActiveTab('home');
+              resetUseFlow();
+              return;
+          }
+          if (profile?.is_deleted) {
+              setErrorMode('deleted');
+              setActiveTab('home');
+              resetUseFlow();
+              return;
+          }
+
+          setIsSubmitting(true);
+          setActiveModal(null);
+          setScanOverlayPhase('processing');
+
+          const { error: claimError } = await supabase.rpc('claim_use_qr_session', {
+              p_session_id: sessionId,
+          });
+
+          if (claimError) throw claimError;
+
+          setUseSessionId(sessionId);
+          setSpendAmount('');
+          setScanOverlayPhase('scanning');
+          setActiveTab('code');
+          setUseFlowPhase('input');
+      } catch (e: unknown) {
+          console.error('Use session scan error:', e);
+          const message = e instanceof Error ? e.message : 'QRの読み取りに失敗しました';
+          setActiveModal({ type: 'error', title: 'エラー', message });
+          setScanOverlayPhase('scanning');
+          setActiveTab('code');
+      } finally {
+          setIsSubmitting(false);
+      }
+  };
+
+  const handleConfirmUseAmount = async () => {
+      if (!useSessionId) {
+          setActiveModal({ type: 'error', title: 'エラー', message: '先に店舗のQRを読み取ってください' });
+          return;
+      }
+      if (!spendAmount || Number(spendAmount) <= 0) {
+          setActiveModal({ type: 'error', title: '入力エラー', message: '利用ポイントを入力してください' });
+          return;
+      }
+      if (Number(spendAmount) > (profile?.points || 0)) {
+          setActiveModal({ type: 'error', title: '残高不足', message: 'ポイント不足です' });
+          return;
+      }
+
+      try {
+          setIsSubmitting(true);
+          setUseFlowPhase('processing');
+
+          const { error: rpcError } = await supabase.rpc('complete_use_qr_session', {
+              p_session_id: useSessionId,
+              p_amount: Number(spendAmount),
+          });
+
+          if (rpcError) throw rpcError;
+
+          finishUseSuccess(Number(spendAmount));
+      } catch (e: unknown) {
+          console.error('Use confirm error:', e);
+          const message = e instanceof Error ? e.message : 'ポイント利用に失敗しました';
+          setActiveModal({ type: 'error', title: 'エラー', message });
+          setUseFlowPhase('input');
+      } finally {
+          setIsSubmitting(false);
+      }
   };
 
   // Auth Guard & Loading Logic
@@ -455,115 +549,143 @@ const CardHome = () => {
       );
   }
 
+  if (activeTab === 'use-scan') {
+      return (
+          <FullScreenScanOverlay
+              title="ポイント使用"
+              hint="店舗のQRを枠のあたりに映してください"
+              accent={isSpecial ? 'gold' : 'teal'}
+              phase={scanOverlayPhase}
+              onClose={() => {
+                  setScanOverlayPhase('scanning');
+                  setActiveTab('code');
+              }}
+              onScan={handleUseSessionScan}
+          />
+      );
+  }
+
+  if (activeTab === 'code' && useFlowPhase === 'success') {
+      return (
+          <FullScreenScanOverlay
+              title="ポイント使用"
+              hint=""
+              accent={isSpecial ? 'gold' : 'teal'}
+              phase="success"
+              successType="USE"
+              successAmount={scanSuccessAmount}
+              onClose={() => {
+                  resetUseFlow();
+                  setActiveTab('home');
+              }}
+              onScan={() => {}}
+          />
+      );
+  }
+
   if (activeTab === 'code') {
       return (
           <div className={`fixed inset-0 flex flex-col z-50 ${isSpecial ? 'bg-[#0f1115]' : 'bg-slate-50'}`}>
               <div className={`p-4 flex justify-between items-center shadow-sm z-10 transition-all ${isSpecial ? 'bg-[#151921] text-white border-b border-white/10' : 'bg-white text-slate-800'}`}>
-                  <button onClick={() => setActiveTab('home')} className={`${isSpecial ? 'text-white hover:bg-white/10 rounded-full p-1' : 'text-slate-800'}`}><ChevronLeft size={28} /></button>
-                  <span className="font-bold text-lg">使う (QR表示)</span>
-                  <div className="w-6"></div>
+                  <button
+                      type="button"
+                      onClick={() => {
+                          resetUseFlow();
+                          setActiveTab('home');
+                      }}
+                      className={`${isSpecial ? 'text-white hover:bg-white/10 rounded-full p-1' : 'text-slate-800'}`}
+                  >
+                      <ChevronLeft size={28} />
+                  </button>
+                  <span className="font-bold text-lg">使う</span>
+                  <div className="w-6" />
               </div>
               <div className={`flex-grow flex flex-col items-center justify-center p-6 space-y-8 ${isSpecial ? 'bg-gradient-to-b from-[#0f1115] to-[#1a1d24]' : 'bg-gradient-to-b from-teal-50 to-slate-50'}`}>
-                  <div className={`p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center transition-all duration-300 ${
-                      isSpecial 
-                        ? `bg-[#1a1d24] border border-yellow-500/20 ${isQrConfirmed ? 'border-yellow-500/50 ring-4 ring-yellow-500/10' : ''}`
-                        : `bg-white border border-gray-100 ${isQrConfirmed ? 'border-teal-200 ring-4 ring-teal-50' : ''}`
-                  }`}>
-                      <div className="mb-6">
-                        <p className={`text-sm mb-1 ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイント</p>
-                        <div className="flex justify-center items-end gap-2">
-                             <input 
-                                type="number" 
-                                value={spendAmount}
-                                onChange={(e) => {
-                                    setSpendAmount(e.target.value);
-                                    setIsQrConfirmed(false); 
-                                }}
-                                placeholder="0"
-                                className={`text-4xl font-bold text-center w-40 outline-none border-b-2 bg-transparent transition-colors ${
-                                    isSpecial 
-                                    ? 'text-white border-gray-600 focus:border-yellow-500 placeholder-gray-700' 
-                                    : 'text-slate-800 border-teal-100 focus:border-teal-500 placeholder-gray-300'
-                                }`}
-                                autoFocus
-                             />
-                             <span className={`font-bold mb-2 ${isSpecial ? 'text-gray-500' : 'text-gray-400'}`}>pt</span>
-                        </div>
-                      </div>
-                      
-                      <div className="relative w-full flex justify-center mb-6">
-                          <div
-                              className={`bg-white p-3 rounded-xl shadow-lg inline-block ${
-                                  isSpecial ? 'ring-2 ring-yellow-500/40' : ''
-                              } ${isQrConfirmed ? '' : 'opacity-20 blur-sm grayscale'}`}
-                          >
-                              {isQrConfirmed ? (
-                                  <QRCodeCanvas
-                                      value={JSON.stringify({
-                                          memberId: user.id,
-                                          userId: user.id,
-                                          type: 'USE',
-                                          amount: Number(spendAmount),
-                                      })}
-                                      size={QR_CANVAS_SIZE}
-                                      bgColor="#ffffff"
-                                      fgColor="#000000"
-                                      level="H"
-                                      includeMargin={true}
-                                      style={QR_USE_CANVAS_STYLE}
-                                  />
-                              ) : (
-                                  <div
-                                      className="flex items-center justify-center text-gray-300"
-                                      style={{ width: QR_USE_DISPLAY_PX, height: QR_USE_DISPLAY_PX }}
-                                  >
-                                      <QrCode size={200} />
-                                  </div>
-                              )}
-                          </div>
-                          {!isQrConfirmed && (
-                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                  <span className={`text-xs font-bold ${isSpecial ? 'text-gray-500' : 'text-slate-400'}`}>
-                                      未確定
-                                  </span>
+                  {useFlowPhase === 'scan' && (
+                      <div className="w-full max-w-sm space-y-6 text-center">
+                          <div className={`rounded-3xl p-8 shadow-2xl ${isSpecial ? 'bg-[#1a1d24] border border-yellow-500/20' : 'bg-white border border-gray-100'}`}>
+                              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${isSpecial ? 'bg-yellow-900/30 text-yellow-500' : 'bg-teal-50 text-teal-600'}`}>
+                                  <Scan size={32} />
                               </div>
-                          )}
+                              <h3 className={`mb-2 text-lg font-black ${isSpecial ? 'text-white' : 'text-slate-800'}`}>店舗のQRを読み取る</h3>
+                              <p className={`text-sm leading-relaxed ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  受付のQRを読み取ったあと、
+                                  <br />
+                                  使うポイントを入力してください。
+                              </p>
+                          </div>
+                          <button
+                              type="button"
+                              onClick={() => {
+                                  setScanOverlayPhase('scanning');
+                                  setActiveTab('use-scan');
+                              }}
+                              className={`w-full font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-transform ${
+                                  isSpecial
+                                      ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 text-white'
+                                      : 'bg-slate-800 text-white'
+                              }`}
+                          >
+                              カメラを起動
+                          </button>
                       </div>
+                  )}
 
-                      <p className={`text-xs transition-colors ${isQrConfirmed ? (isSpecial ? 'text-yellow-500 font-bold' : 'text-teal-600 font-bold') : (isSpecial ? 'text-gray-500' : 'text-slate-400')}`}>
-                          {isQrConfirmed ? 'スタッフに提示してください（画面を明るく）' : '金額を入力して確定してください'}
-                      </p>
-                  </div>
-                  
-                  {!isQrConfirmed ? (
-                      <button 
-                        onClick={handleConfirmAmount} 
-                        disabled={!spendAmount}
-                        className={`w-full max-w-sm font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:shadow-none active:scale-95 transition-transform ${
-                            isSpecial
-                            ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 text-white shadow-yellow-900/20 hover:from-yellow-600 hover:to-yellow-500'
-                            : 'bg-slate-800 text-white shadow-slate-800/30'
-                        }`}
-                      >
-                          金額を確定してQRを表示
-                      </button>
-                  ) : (
-                      <div className="w-full max-w-sm space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                            {/* Simulation Button Removed - User must wait for staff to scan */}
-                            <p className={`text-center text-sm font-bold animate-pulse ${isSpecial ? 'text-yellow-500' : 'text-teal-600'}`}>
-                                スタッフがスキャンするのを待っています...
-                            </p>
-                            <button 
-                                onClick={() => setIsQrConfirmed(false)}
-                                className={`w-full text-sm font-bold py-2 ${isSpecial ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                金額を変更する
-                            </button>
+                  {(useFlowPhase === 'input' || useFlowPhase === 'processing') && (
+                      <div className={`p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center ${isSpecial ? 'bg-[#1a1d24] border border-yellow-500/20' : 'bg-white border border-gray-100'}`}>
+                          <p className={`mb-1 text-sm ${isSpecial ? 'text-teal-400 font-bold' : 'text-teal-600 font-bold'}`}>店舗QRを読み取りました</p>
+                          <p className={`text-sm mb-6 ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイントを入力して確定してください</p>
+                          <div className="mb-6">
+                              <p className={`text-sm mb-1 ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイント</p>
+                              <div className="flex justify-center items-end gap-2">
+                                  <input
+                                      type="number"
+                                      value={spendAmount}
+                                      onChange={(e) => setSpendAmount(e.target.value)}
+                                      placeholder="0"
+                                      disabled={useFlowPhase === 'processing'}
+                                      className={`text-4xl font-bold text-center w-40 outline-none border-b-2 bg-transparent transition-colors ${
+                                          isSpecial
+                                              ? 'text-white border-gray-600 focus:border-yellow-500 placeholder-gray-700'
+                                              : 'text-slate-800 border-teal-100 focus:border-teal-500 placeholder-gray-300'
+                                      }`}
+                                      autoFocus
+                                  />
+                                  <span className={`font-bold mb-2 ${isSpecial ? 'text-gray-500' : 'text-gray-400'}`}>pt</span>
+                              </div>
+                              <p className={`mt-3 text-xs ${isSpecial ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  残高: {profile.points.toLocaleString()} pt
+                              </p>
+                          </div>
+                          <button
+                              type="button"
+                              onClick={() => void handleConfirmUseAmount()}
+                              disabled={!spendAmount || useFlowPhase === 'processing'}
+                              className={`w-full font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 active:scale-95 transition-transform ${
+                                  isSpecial
+                                      ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 text-white'
+                                      : 'bg-slate-800 text-white'
+                              }`}
+                          >
+                              {useFlowPhase === 'processing' ? '処理中...' : '確定する'}
+                          </button>
+                          <button
+                              type="button"
+                              onClick={() => {
+                                  resetUseFlow();
+                                  setActiveTab('use-scan');
+                                  setScanOverlayPhase('scanning');
+                              }}
+                              disabled={useFlowPhase === 'processing'}
+                              className={`mt-4 text-sm font-bold ${isSpecial ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                          >
+                              別のQRを読み取る
+                          </button>
                       </div>
                   )}
               </div>
           </div>
-      )
+      );
   }
 
   // History Full View
@@ -716,7 +838,10 @@ const CardHome = () => {
           </button>
 
           <button 
-            onClick={() => setActiveTab('code')}
+            onClick={() => {
+                resetUseFlow();
+                setActiveTab('code');
+            }}
             className={`p-3 rounded-xl shadow-lg flex flex-col items-center justify-center gap-1.5 transition-transform hover:-translate-y-1 active:scale-95 touch-manipulation ${
                 isSpecial 
                 ? 'bg-gradient-to-br from-slate-800 to-[#1a1d24] border border-slate-700' 

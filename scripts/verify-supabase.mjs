@@ -63,8 +63,13 @@ await checkTable('profiles', 'id, email, current_points');
 await checkTable('transactions', 'id, type, amount');
 await checkTable('courses', 'id, title, points');
 await checkTable('audit_logs', 'id');
+await checkTable('use_qr_sessions', 'id, status');
 await checkRpc('execute_point_transaction');
 await checkRpc('execute_admin_action');
+await checkRpc('create_use_qr_session');
+await checkRpc('claim_use_qr_session');
+await checkRpc('complete_use_qr_session');
+await checkRpc('cancel_use_qr_session');
 
 if (failed) {
   console.error('\nSome checks failed. If RPCs are missing, run db_scripts/_latest/*.sql in Supabase SQL Editor.');
