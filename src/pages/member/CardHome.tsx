@@ -616,7 +616,7 @@ const CardHome = () => {
 
   if (activeTab === 'code' && (useFlowPhase === 'input' || useFlowPhase === 'processing')) {
       return (
-          <div className={`fixed inset-0 z-50 flex flex-col ${isSpecial ? 'bg-[#0f1115]' : 'bg-slate-50'}`}>
+          <div className={`fixed inset-0 z-50 flex min-h-0 flex-col ${isSpecial ? 'bg-[#0f1115]' : 'bg-slate-50'}`}>
               <div
                   className={`relative z-50 flex shrink-0 items-center justify-between px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-sm ${isSpecial ? 'bg-[#151921] text-white border-b border-white/10' : 'bg-white text-slate-800'}`}
                   style={{ WebkitTransform: 'translateZ(0)' }}
@@ -635,57 +635,64 @@ const CardHome = () => {
                   <span className="font-bold text-lg">使う</span>
                   <div className="w-11" />
               </div>
-              <div className={`relative z-0 flex-grow overflow-y-auto flex flex-col items-center justify-center p-6 ${isSpecial ? 'bg-gradient-to-b from-[#0f1115] to-[#1a1d24]' : 'bg-gradient-to-b from-teal-50 to-slate-50'}`}>
-                  <div className={`p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center ${isSpecial ? 'bg-[#1a1d24] border border-yellow-500/20' : 'bg-white border border-gray-100'}`}>
-                          <p className={`mb-1 text-sm ${isSpecial ? 'text-teal-400 font-bold' : 'text-teal-600 font-bold'}`}>店舗QRを読み取りました</p>
-                          <p className={`text-sm mb-6 ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイントを入力して確定してください</p>
-                          <div className="mb-6">
-                              <p className={`text-sm mb-1 ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイント</p>
-                              <div className="flex justify-center items-end gap-2">
-                                  <input
-                                      type="number"
-                                      value={spendAmount}
-                                      onChange={(e) => setSpendAmount(e.target.value)}
-                                      placeholder="0"
-                                      disabled={useFlowPhase === 'processing'}
-                                      className={`text-4xl font-bold text-center w-40 outline-none border-b-2 bg-transparent transition-colors ${
-                                          isSpecial
-                                              ? 'text-white border-gray-600 focus:border-yellow-500 placeholder-gray-700'
-                                              : 'text-slate-800 border-teal-100 focus:border-teal-500 placeholder-gray-300'
-                                      }`}
-                                      autoFocus
-                                  />
-                                  <span className={`font-bold mb-2 ${isSpecial ? 'text-gray-500' : 'text-gray-400'}`}>pt</span>
-                              </div>
-                              <p className={`mt-3 text-xs ${isSpecial ? 'text-gray-500' : 'text-gray-400'}`}>
-                                  残高: {profile.points.toLocaleString()} pt
-                              </p>
+
+              <div className={`min-h-0 flex-1 overflow-y-auto px-6 pt-4 ${isSpecial ? 'bg-gradient-to-b from-[#0f1115] to-[#1a1d24]' : 'bg-gradient-to-b from-teal-50 to-slate-50'}`}>
+                  <div className={`mx-auto w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl ${isSpecial ? 'bg-[#1a1d24] border border-yellow-500/20' : 'bg-white border border-gray-100'}`}>
+                      <p className={`mb-1 text-sm ${isSpecial ? 'text-teal-400 font-bold' : 'text-teal-600 font-bold'}`}>店舗QRを読み取りました</p>
+                      <p className={`mb-6 text-sm ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイントを入力して確定してください</p>
+                      <div>
+                          <p className={`mb-1 text-sm ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイント</p>
+                          <div className="flex items-end justify-center gap-2">
+                              <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  value={spendAmount}
+                                  onChange={(e) => setSpendAmount(e.target.value)}
+                                  placeholder="0"
+                                  disabled={useFlowPhase === 'processing'}
+                                  className={`w-40 border-b-2 bg-transparent text-center text-4xl font-bold outline-none transition-colors ${
+                                      isSpecial
+                                          ? 'border-gray-600 text-white placeholder-gray-700 focus:border-yellow-500'
+                                          : 'border-teal-100 text-slate-800 placeholder-gray-300 focus:border-teal-500'
+                                  }`}
+                                  autoFocus
+                              />
+                              <span className={`mb-2 font-bold ${isSpecial ? 'text-gray-500' : 'text-gray-400'}`}>pt</span>
                           </div>
-                          <button
-                              type="button"
-                              onClick={() => void handleConfirmUseAmount()}
-                              disabled={!spendAmount || useFlowPhase === 'processing'}
-                              className={`w-full font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 active:scale-95 transition-transform ${
-                                  isSpecial
-                                      ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 text-white'
-                                      : 'bg-slate-800 text-white'
-                              }`}
-                          >
-                              {useFlowPhase === 'processing' ? '処理中...' : '確定する'}
-                          </button>
-                          <button
-                              type="button"
-                              onClick={() => void abandonUseSession()}
-                              disabled={useFlowPhase === 'processing'}
-                              className={`mt-3 w-full rounded-xl border py-3 text-sm font-bold active:scale-95 transition-transform ${
-                                  isSpecial
-                                      ? 'border-gray-600 text-gray-400 hover:text-gray-200'
-                                      : 'border-gray-200 text-gray-500 hover:text-gray-700'
-                              }`}
-                          >
-                              キャンセル
-                          </button>
+                          <p className={`mt-3 text-xs ${isSpecial ? 'text-gray-500' : 'text-gray-400'}`}>
+                              残高: {profile.points.toLocaleString()} pt
+                          </p>
+                      </div>
                   </div>
+              </div>
+
+              <div
+                  className={`shrink-0 space-y-3 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 ${isSpecial ? 'border-t border-white/10 bg-[#151921]' : 'border-t border-gray-100 bg-white'}`}
+              >
+                  <button
+                      type="button"
+                      onClick={() => void handleConfirmUseAmount()}
+                      disabled={!spendAmount || useFlowPhase === 'processing'}
+                      className={`w-full rounded-xl py-4 font-bold shadow-lg transition-transform active:scale-95 disabled:opacity-50 ${
+                          isSpecial
+                              ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 text-white'
+                              : 'bg-slate-800 text-white'
+                      }`}
+                  >
+                      {useFlowPhase === 'processing' ? '処理中...' : '確定する'}
+                  </button>
+                  <button
+                      type="button"
+                      onClick={() => void abandonUseSession()}
+                      disabled={useFlowPhase === 'processing'}
+                      className={`w-full rounded-xl border py-3 text-sm font-bold transition-transform active:scale-95 ${
+                          isSpecial
+                              ? 'border-gray-600 text-gray-400 hover:text-gray-200'
+                              : 'border-gray-200 text-gray-500 hover:text-gray-700'
+                      }`}
+                  >
+                      キャンセル
+                  </button>
               </div>
           </div>
       );
