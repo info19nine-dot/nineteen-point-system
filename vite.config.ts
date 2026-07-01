@@ -38,7 +38,7 @@ export default defineConfig(() => {
       react(),
       htmlTransformPlugin(mode),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         includeAssets: [
           `${iconBase}/apple-touch-icon.png`,
           `${iconBase}/pwa-192x192.png`,

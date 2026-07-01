@@ -89,7 +89,7 @@ export function FullScreenScanOverlay({
                 )}
 
                 {isSuccess && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/55 p-6 backdrop-blur-[2px]">
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-6 backdrop-blur-[2px]">
                         <div className="w-full max-w-sm rounded-3xl bg-white p-8 text-center text-slate-800 shadow-2xl">
                             <div
                                 className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full ${

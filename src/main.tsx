@@ -1,12 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { registerSW } from 'virtual:pwa-register';
 import App from './App.tsx';
 import './styles/index.css';
 import { SupabaseProvider } from './contexts/SupabaseContext';
-
-registerSW({ immediate: true });
+import './lib/pwaUpdate';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

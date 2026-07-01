@@ -33,7 +33,6 @@ const CardHome = () => {
   
   const isSpecial = profile?.rank === 'special'; // Helper const
   
-  const [successMode, setSuccessMode] = useState<'none' | 'pay'>('none');
   const [scanOverlayPhase, setScanOverlayPhase] = useState<ScanOverlayPhase>('scanning');
   const [scanSuccessAmount, setScanSuccessAmount] = useState<number | undefined>();
   const [useSessionId, setUseSessionId] = useState<string | null>(null);
@@ -186,7 +185,7 @@ const CardHome = () => {
 
 
 
-  // Realtime Listener for ALL transactions (Sync & Payment Popup)
+  // Realtime Listener for transaction sync
   useEffect(() => {
     if (!user) return;
 
@@ -200,27 +199,8 @@ const CardHome = () => {
             table: 'transactions',
             filter: `member_id=eq.${user.id}`,
         },
-        (payload: any) => {
-            fetchHistory(); // Always refresh history data
-
-            // Handle Payment (USE) Popup - Only on new INSERT
-            if (payload.eventType === 'INSERT') {
-                const newTransaction = payload.new as Transaction;
-                
-                if (newTransaction.type === 'USE' && !newTransaction.is_cancelled) {
-                    // Determine amount
-                    setSpendAmount(newTransaction.amount.toString());
-                    
-                    // Show Success Popup & Return to Home
-                    setActiveTab('home'); // Auto-navigate back to top
-                    setSuccessMode('pay');
-                    
-                    // Auto-hide popup after 3 seconds
-                    setTimeout(() => {
-                        setSuccessMode('none');
-                    }, 3000);
-                }
-            }
+        () => {
+            fetchHistory();
         }
       )
       .subscribe();
@@ -531,40 +511,6 @@ const CardHome = () => {
               </div>
           </div>
       );
-  }
-
-  // Render Success Popup (PayPay Style — staff scanned member QR)
-  if (successMode === 'pay') {
-      const isGold = isSpecial;
-      return (
-          <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300 ${isGold ? 'bg-gradient-to-br from-[#1a1d24] to-[#0f1115] text-white' : 'bg-white text-slate-800'}`}>
-              
-              {/* Confetti / Shine Effect for Gold */}
-              {isGold && (
-                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                      <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-yellow-500/20 rounded-full blur-[100px] animate-pulse"></div>
-                      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-yellow-300/10 rounded-full blur-[80px]"></div>
-                  </div>
-              )}
-
-              <div className={`${isGold ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-yellow-500/50' : 'bg-teal-500 shadow-teal-500/30'} w-32 h-32 rounded-full flex items-center justify-center shadow-2xl mb-8 animate-[bounce_1s_infinite] relative z-10`}>
-                  <CheckCircle2 size={64} className="text-white" />
-              </div>
-              
-              <h2 className={`text-3xl font-black mb-2 relative z-10 ${isGold ? 'text-yellow-100' : 'text-slate-800'}`}>
-                  利用完了！
-              </h2>
-              
-              <p className={`text-5xl font-black tracking-tighter relative z-10 ${isGold ? 'text-yellow-400 drop-shadow-sm' : 'text-teal-500'}`}>
-                  -{spendAmount}
-                  <span className={`text-2xl ml-2 font-bold ${isGold ? 'text-yellow-100/70' : 'text-gray-400'}`}>pt</span>
-              </p>
-
-              <div className="absolute bottom-20 z-10">
-                  <button onClick={() => setSuccessMode('none')} className={`font-bold border-b pb-1 transition-colors ${isGold ? 'text-yellow-100/50 border-yellow-100/30 hover:text-yellow-100' : 'text-gray-400 border-gray-300 hover:text-gray-600'}`}>閉じる</button>
-              </div>
-          </div>
-      )
   }
 
   if (activeTab === 'scan') {
