@@ -600,20 +600,29 @@ const CardHome = () => {
 
   if (activeTab === 'code' && (useFlowPhase === 'input' || useFlowPhase === 'processing')) {
       return (
-          <div className={`fixed inset-0 flex flex-col z-50 ${isSpecial ? 'bg-[#0f1115]' : 'bg-slate-50'}`}>
-              <div className={`p-4 flex justify-between items-center shadow-sm z-10 transition-all ${isSpecial ? 'bg-[#151921] text-white border-b border-white/10' : 'bg-white text-slate-800'}`}>
+          <div className={`fixed inset-0 z-50 flex flex-col ${isSpecial ? 'bg-[#0f1115]' : 'bg-slate-50'}`}>
+              <div
+                  className={`relative z-50 flex shrink-0 items-center justify-between px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-sm ${isSpecial ? 'bg-[#151921] text-white border-b border-white/10' : 'bg-white text-slate-800'}`}
+                  style={{ WebkitTransform: 'translateZ(0)' }}
+              >
                   <button
                       type="button"
-                      onClick={closeUseScanOverlay}
-                      className={`touch-manipulation flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full ${isSpecial ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-gray-100'}`}
+                      onClick={() => {
+                          if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                          }
+                          closeUseScanOverlay();
+                      }}
+                      disabled={useFlowPhase === 'processing'}
+                      className={`touch-manipulation flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-40 ${isSpecial ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-slate-800 hover:bg-gray-100 active:bg-gray-200'}`}
                       aria-label="戻る"
                   >
                       <ChevronLeft size={28} />
                   </button>
                   <span className="font-bold text-lg">使う</span>
-                  <div className="w-6" />
+                  <div className="w-11" />
               </div>
-              <div className={`flex-grow flex flex-col items-center justify-center p-6 space-y-8 ${isSpecial ? 'bg-gradient-to-b from-[#0f1115] to-[#1a1d24]' : 'bg-gradient-to-b from-teal-50 to-slate-50'}`}>
+              <div className={`relative z-0 flex-grow overflow-y-auto flex flex-col items-center justify-center p-6 ${isSpecial ? 'bg-gradient-to-b from-[#0f1115] to-[#1a1d24]' : 'bg-gradient-to-b from-teal-50 to-slate-50'}`}>
                   <div className={`p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center ${isSpecial ? 'bg-[#1a1d24] border border-yellow-500/20' : 'bg-white border border-gray-100'}`}>
                           <p className={`mb-1 text-sm ${isSpecial ? 'text-teal-400 font-bold' : 'text-teal-600 font-bold'}`}>店舗QRを読み取りました</p>
                           <p className={`text-sm mb-6 ${isSpecial ? 'text-gray-400' : 'text-gray-500'}`}>利用ポイントを入力して確定してください</p>

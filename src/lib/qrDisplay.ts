@@ -7,8 +7,8 @@ export const QR_EARN_DISPLAY_PX = 280;
 /** Member use QR — same on-screen size as earn (no upscale) */
 export const QR_USE_DISPLAY_PX = 280;
 
-/** Staff dashboard inline use QR (half-width card) */
-export const QR_USE_INLINE_DISPLAY_PX = 132;
+/** Staff dashboard inline use QR — fits beside 発行 button with refresh in corner margin */
+export const QR_USE_INLINE_DISPLAY_PX = 112;
 
 export function qrCanvasStyle(displayPx: number) {
     return {
