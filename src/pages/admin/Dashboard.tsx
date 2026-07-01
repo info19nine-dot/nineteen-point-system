@@ -197,6 +197,11 @@ const Dashboard = () => {
                     const tx = payload.new;
                     if (tx.type !== 'USE' || tx.amount == null) return;
                     finishUseQrFlow(Number(tx.amount));
+                }
+            )
+            .subscribe();
+
+        const sessionChannel = supabase
             .channel(`use-qr-session:${sessionId}`)
             .on(
                 'postgres_changes',
