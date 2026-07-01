@@ -805,8 +805,8 @@ const DesktopMemberDetail = () => {
                                     <th className="px-6 py-4 font-bold w-40">日時</th>
                                     <th className="px-6 py-4 font-bold w-24 text-center">種別</th>
                                     <th className="px-6 py-4 font-bold">取引内容</th>
-                                    <th className="px-6 py-4 font-bold text-center w-24">残高</th>
                                     <th className="px-6 py-4 font-bold text-right w-24">ポイント</th>
+                                    <th className="px-6 py-4 font-bold text-center w-24">残高</th>
                                     <th className="px-4 py-4 font-bold text-center w-32">操作</th>
                                 </tr>
                             </thead>
@@ -874,13 +874,6 @@ const DesktopMemberDetail = () => {
                                                         );
                                                     })()}
                                                 </td>
-                                                <td className="px-6 py-4 text-center whitespace-nowrap">
-                                                    <span className="font-bold text-lg text-slate-600">
-                                                        {tx.type !== 'INFO' && (tx as any).balance_snapshot !== null && (tx as any).balance_snapshot !== undefined
-                                                            ? `${(tx as any).balance_snapshot.toLocaleString()} pt` 
-                                                            : '-'}
-                                                    </span>
-                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <span className={`font-bold text-lg ${
                                                         tx.is_cancelled ? 'text-gray-400 line-through' :
@@ -891,6 +884,13 @@ const DesktopMemberDetail = () => {
                                                         {tx.type === 'INFO' ? '-' : (tx.type === 'USE' ? '-' : '') + tx.amount.toLocaleString()}
                                                     </span>
                                                     <span className="text-xs text-gray-400 ml-1">pt</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                    <span className="font-bold text-lg text-slate-600">
+                                                        {tx.type !== 'INFO' && (tx as any).balance_snapshot !== null && (tx as any).balance_snapshot !== undefined
+                                                            ? `${(tx as any).balance_snapshot.toLocaleString()} pt` 
+                                                            : '-'}
+                                                    </span>
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap text-center text-sm">
                                                     <div className="flex flex-col items-center gap-1">

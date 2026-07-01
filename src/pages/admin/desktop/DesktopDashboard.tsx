@@ -511,9 +511,9 @@ const DesktopDashboard = () => {
                             <th className="px-6 py-4 font-bold">会員名</th>
                             <th className="px-6 py-4 font-bold w-24 text-center">種別</th>
                             <th className="px-6 py-4 font-bold">取引内容</th>
-                            <th className="px-6 py-4 font-bold text-center w-24">残高</th>
                             <th className="px-6 py-4 font-bold text-right w-24">ポイント</th>
-                            <th className="px-6 py-4 font-bold text-center w-28 whitespace-nowrap">担当</th>
+                            <th className="px-6 py-4 font-bold text-center w-24">残高</th>
+                            <th className="px-6 py-4 font-bold text-center w-28 whitespace-nowrap">ステータス</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -606,13 +606,6 @@ const DesktopDashboard = () => {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-center whitespace-nowrap">
-                                        <span className="font-bold text-lg text-slate-600">
-                                            {tx.type !== 'INFO' && (tx as any).balance_snapshot !== null && (tx as any).balance_snapshot !== undefined
-                                                ? `${(tx as any).balance_snapshot.toLocaleString()} pt` 
-                                                : '-'}
-                                        </span>
-                                    </td>
                                     <td className="px-6 py-4 text-right">
                                         <span className={`font-bold text-lg ${
                                             tx.is_cancelled ? 'line-through text-gray-400 decoration-gray-400' :
@@ -622,6 +615,13 @@ const DesktopDashboard = () => {
                                             {tx.type === 'INFO' ? '-' : tx.amount.toLocaleString()}
                                         </span>
                                         <span className={`text-xs text-gray-400 ml-1 ${tx.is_cancelled ? 'line-through decoration-gray-400' : ''}`}>pt</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                                        <span className="font-bold text-lg text-slate-600">
+                                            {tx.type !== 'INFO' && (tx as any).balance_snapshot !== null && (tx as any).balance_snapshot !== undefined
+                                                ? `${(tx as any).balance_snapshot.toLocaleString()} pt` 
+                                                : '-'}
+                                        </span>
                                     </td>
                                     <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-slate-600">
                                         {extractStaffSignature(tx.description) ?? (
