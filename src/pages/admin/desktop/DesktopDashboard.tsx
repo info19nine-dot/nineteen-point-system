@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../lib/supabaseClient';
 import { STAFF_MODE_SELECT_PATH } from '../../../lib/routes';
-import { AlertTriangle, ChevronRight, Filter, ChevronDown, ChevronUp, FileText, ArrowLeft, ArrowRight, Calendar, X, User, FileSpreadsheet, Download, Loader2, ShieldCheck, Clock, Ban, CheckCircle2, Database, Info, Home, Search, Menu, LayoutGrid } from 'lucide-react';
+import { extractStaffSignature, formatTransactionDisplayText } from '../../../lib/transactionDisplay';
+import { AlertTriangle, ChevronRight, Filter, ChevronDown, ChevronUp, FileText, ArrowLeft, ArrowRight, Calendar, X, User, FileSpreadsheet, Download, Loader2, ShieldCheck, Clock, CheckCircle2, Database, Info, Home, Search, Menu, LayoutGrid } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/skeleton';
 
 type SortKey = 'points' | 'lastVisit' | 'name' | 'email';
@@ -512,7 +513,7 @@ const DesktopDashboard = () => {
                             <th className="px-6 py-4 font-bold">取引内容</th>
                             <th className="px-6 py-4 font-bold text-center w-24">残高</th>
                             <th className="px-6 py-4 font-bold text-right w-24">ポイント</th>
-                            <th className="px-6 py-4 font-bold text-center w-36 whitespace-nowrap">ステータス</th>
+                            <th className="px-6 py-4 font-bold text-center w-28 whitespace-nowrap">担当</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -591,32 +592,15 @@ const DesktopDashboard = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className={`text-sm flex items-center gap-2 flex-wrap ${tx.is_cancelled ? 'line-through text-gray-400 decoration-gray-400' : ''}`}>
-                                            <span className="text-slate-800">
-                                                {(() => {
-                                                    // New: Extract simple title for INFO
-                                                    if (tx.type === 'INFO') {
-                                                        return (tx.description || '').replace('【システム】', '').replace('会員による', '').split(':')[0].trim();
-                                                    }
-
-                                                    const desc = (tx.description || '')
-                                                        .replace(/【修正:.*?】/, '') // Remove Correction prefix tag
-                                                        .replace(/【調整:.*?】/, '') // Remove Adjustment prefix tag
-                                                        .replace(/\(元: \d+pt\)/, '')
-                                                        .replace('【利用】', '')
-                                                        .replace('【システム】', '')
-                                                        .trim();
-                                                    
-                                                    if (desc.includes('Course QR:')) return desc.replace('Course QR:', '').trim();
-                                                    if (desc === 'Point usage via QR scan' || desc === 'QRコード利用') return 'ポイント利用';
-                                                    return desc.replace('Point usage via QR scan', 'ポイント利用') || (tx.type === 'EARN' ? 'ポイント獲得' : (tx.type === 'USE' ? 'ポイント利用' : '通知'));
-                                                })()}
+                                        <div className="text-sm">
+                                            <span className={tx.is_cancelled ? 'text-gray-400 line-through' : 'text-slate-800'}>
+                                                {formatTransactionDisplayText(tx.description, tx.type)}
                                             </span>
-                                            {tx.served_by && 
-                                             !tx.served_by.includes('System') && 
-                                             !tx.served_by.includes('SYSTEM') && 
+                                            {tx.served_by &&
+                                             !tx.served_by.includes('System') &&
+                                             !tx.served_by.includes('SYSTEM') &&
                                              !tx.served_by.includes('システム') && (
-                                                <span className="text-xs text-slate-500">
+                                                <span className="text-xs text-slate-500 ml-1">
                                                     ({tx.served_by})
                                                 </span>
                                             )}
@@ -639,18 +623,9 @@ const DesktopDashboard = () => {
                                         </span>
                                         <span className={`text-xs text-gray-400 ml-1 ${tx.is_cancelled ? 'line-through decoration-gray-400' : ''}`}>pt</span>
                                     </td>
-                                    <td className="px-6 py-4 text-center whitespace-nowrap">
-                                        {tx.is_cancelled ? (
-                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-500 text-xs font-bold">
-                                                <Ban size={12} /> 取消済み
-                                            </span>
-                                        ) : (
-                                            /* Correction Button Removed */
-                                            (!isMemberDeleted && tx.type !== 'INFO') ? (
-                                                <span className="text-gray-300 text-xs">-</span>
-                                            ) : (
-                                                <span className="text-gray-300 text-xs">-</span>
-                                            )
+                                    <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-slate-600">
+                                        {extractStaffSignature(tx.description) ?? (
+                                            <span className="text-gray-300">-</span>
                                         )}
                                     </td>
 
