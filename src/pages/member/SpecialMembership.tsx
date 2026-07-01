@@ -145,7 +145,7 @@ const SpecialMembership = () => {
                 <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-gradient-to-br from-yellow-900/10 via-transparent to-transparent blur-[120px] rounded-full pointer-events-none"></div>
 
                 {/* Certificate Card - Premium Black Card Style with Thicker Border & Subtle Gradient */}
-                <div className="relative z-10 w-full max-w-sm aspect-[1/1.5] flex flex-col bg-gradient-to-b from-[#1c1c1c] to-[#0d0d0d] rounded-[24px] p-5 sm:p-6 text-center shadow-[0_0_60px_-10px_rgba(234,179,8,0.25)] border-[3px] border-yellow-600/80 overflow-hidden group transition-all hover:scale-[1.01] duration-500">
+                <div className="relative z-10 w-full max-w-sm aspect-[1/1.5] bg-gradient-to-b from-[#1c1c1c] to-[#0d0d0d] rounded-[24px] p-8 text-center shadow-[0_0_60px_-10px_rgba(234,179,8,0.25)] border-[3px] border-yellow-600/80 overflow-hidden group transition-all hover:scale-[1.01] duration-500">
                     
                     {/* Metallic Shine on Border (Inner Ring) */}
                     <div className="absolute inset-0 rounded-[21px] border border-yellow-400/20 pointer-events-none"></div>
@@ -154,19 +154,19 @@ const SpecialMembership = () => {
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] pointer-events-none mix-blend-overlay"></div>
                     
                     {/* Header */}
-                    <div className="relative w-full mt-2 shrink-0">
+                    <div className="relative w-full mt-6">
                         {/* Emblem */}
-                        <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-b from-yellow-200 to-yellow-600 p-[2px] shadow-[0_0_25px_rgba(234,179,8,0.5)] mb-3 animate-pulse-slow">
+                        <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-b from-yellow-200 to-yellow-600 p-[2px] shadow-[0_0_25px_rgba(234,179,8,0.5)] mb-6 animate-pulse-slow">
                              <div className="w-full h-full rounded-full bg-black flex items-center justify-center relative overflow-hidden">
                                   <div className="absolute inset-0 bg-gradient-to-tr from-yellow-900/40 to-transparent"></div>
-                                  <ShieldCheck size={32} className="text-yellow-400 relative z-10 drop-shadow-md" />
+                                  <ShieldCheck size={40} className="text-yellow-400 relative z-10 drop-shadow-md" />
                              </div>
                         </div>
 
-                        <h1 className="text-xl font-serif font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-100 via-yellow-300 to-yellow-600 tracking-[0.15em] uppercase mb-0.5 drop-shadow-sm">
+                        <h1 className="text-2xl font-serif font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-100 via-yellow-300 to-yellow-600 tracking-[0.15em] uppercase mb-1 drop-shadow-sm">
                             Premium
                         </h1>
-                        <h2 className="text-base font-serif font-bold text-yellow-500 tracking-[0.2em] mb-3 text-shadow-gold">
+                        <h2 className="text-lg font-serif font-bold text-yellow-500 tracking-[0.2em] mb-6 text-shadow-gold">
                             特別会員
                         </h2>
                         
@@ -174,14 +174,14 @@ const SpecialMembership = () => {
                     </div>
 
                     {/* Member Details */}
-                    <div className="relative w-full py-2 shrink-0">
-                        <p className="text-xs text-yellow-700 uppercase tracking-widest mb-1 font-medium">氏名</p>
-                        <p className="text-2xl font-serif font-bold text-white tracking-wide drop-shadow-md mb-3">{profile.name}</p>
+                    <div className="relative w-full py-4">
+                        <p className="text-xs text-yellow-700 uppercase tracking-widest mb-2 font-medium">氏名</p>
+                        <p className="text-3xl font-serif font-bold text-white tracking-wide drop-shadow-md mb-6">{profile.name}</p>
                         
-                        <div className="flex justify-between items-end px-2 sm:px-4">
+                        <div className="flex justify-between items-end px-4">
                              <div className="text-left">
                                  <p className="text-[10px] text-yellow-700 uppercase tracking-widest mb-1 font-bold">会員No</p>
-                                 <p className="text-xl font-serif text-yellow-500 font-bold tracking-wide tabular-nums">{profile.member_code}</p>
+                                 <p className="text-2xl font-serif text-yellow-500 font-bold tracking-widest tabular-nums">{profile.member_code}</p>
                              </div>
                              <div className="text-right flex items-end">
                                   {profile.membership_expiry ? (
@@ -199,19 +199,20 @@ const SpecialMembership = () => {
                     </div>
 
                     {/* Live Status (Bottom Area) - Anti-Screenshot */}
-                    <div className="relative w-full mt-auto pt-2 shrink-0">
-                         <div className="w-full bg-[#0a0a0a]/90 border border-green-900/30 rounded-xl px-3 py-2 backdrop-blur-sm shadow-inner overflow-hidden relative group">
-                             <div className="flex flex-col items-center justify-center relative z-10 w-full min-w-0">
+                    <div className="relative w-full mt-4">
+                         <div className="w-full bg-[#0a0a0a]/90 border border-green-900/30 rounded-xl px-3 pt-2 pb-2.5 backdrop-blur-sm shadow-inner overflow-hidden relative group">
+                             <div className="flex flex-col items-center justify-center my-1 relative z-10 w-full min-w-0">
                                  {/* Status Indicator (Pulse Only) */}
-                                 <div className="flex items-center justify-center h-2.5 mb-1">
+                                 <div className="flex items-center gap-2 mb-1">
                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div>
                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full absolute"></div>
                                  </div>
                                  
-                                 <div className="text-2xl font-serif font-bold text-white tracking-wide drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] tabular-nums leading-none mb-1 max-w-full">
+                                 {/* Clock Only */}
+                                 <div className="text-3xl font-serif font-bold text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] tabular-nums leading-none mb-1">
                                      {currentTime.toLocaleTimeString('ja-JP', { hour12: false })}
                                  </div>
-                                 <div className="text-[10px] text-green-500/80 font-mono tracking-normal tabular-nums px-1 max-w-full text-center leading-snug pb-0.5">
+                                 <div className="text-[10px] text-green-500/80 font-mono tracking-normal tabular-nums px-1 text-center leading-normal">
                                      {currentTime.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
                                  </div>
                              </div>
