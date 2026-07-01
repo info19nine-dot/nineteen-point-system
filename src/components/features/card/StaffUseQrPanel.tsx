@@ -3,6 +3,8 @@ import { Loader2 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { buildUseSessionQrPayload } from '../../../lib/useQrSession';
 
+const QR_INSET_PX = 8;
+
 type StaffUseQrPanelProps = {
     sessionId: string | null;
     status: 'waiting' | 'inputting';
@@ -28,8 +30,8 @@ export function StaffUseQrPanel({
         if (!el) return;
 
         const update = () => {
-            const size = Math.floor(Math.min(el.clientWidth, el.clientHeight));
-            setQrPx(size);
+            const inner = Math.floor(Math.min(el.clientWidth, el.clientHeight)) - QR_INSET_PX * 2;
+            setQrPx(Math.max(inner, 0));
         };
 
         update();
@@ -45,14 +47,12 @@ export function StaffUseQrPanel({
             onClick={onTap}
             disabled={isInitializing || isRegenerating || !sessionId}
             aria-label="ポイント使用QR。タップで出し直し"
-            className="relative aspect-square w-full touch-manipulation overflow-hidden rounded-2xl bg-white p-0 shadow-xl shadow-slate-800/10 transition-transform active:scale-95 disabled:opacity-60"
+            className="relative flex aspect-square w-full touch-manipulation items-center justify-center rounded-2xl bg-white p-2 shadow-xl shadow-slate-800/10 transition-transform active:scale-95 disabled:opacity-60"
         >
             {isInitializing ? (
-                <span className="absolute inset-0 flex items-center justify-center">
-                    <Loader2 className="animate-spin text-teal-500" size={40} />
-                </span>
+                <Loader2 className="animate-spin text-teal-500" size={40} />
             ) : showQr ? (
-                <>
+                <div className="relative shrink-0" style={{ width: qrPx, height: qrPx }}>
                     <QRCodeCanvas
                         value={qrPayload}
                         size={qrPx}
@@ -60,7 +60,6 @@ export function StaffUseQrPanel({
                         fgColor="#000000"
                         level="H"
                         includeMargin={false}
-                        className="block h-full w-full"
                         style={{
                             width: qrPx,
                             height: qrPx,
@@ -73,7 +72,7 @@ export function StaffUseQrPanel({
                             <span className="text-sm font-bold tracking-widest text-teal-600">入力中</span>
                         </span>
                     )}
-                </>
+                </div>
             ) : null}
         </button>
     );
