@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Scan, QrCode, ChevronLeft, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
-import { parseUseSessionQr } from '../../lib/useQrSession';
+import { parseUseSessionQr, releaseUseQrSession } from '../../lib/useQrSession';
 import { Skeleton } from '../../components/ui/skeleton';
 
 // 取引履歴の型定義
@@ -242,6 +242,22 @@ const CardHome = () => {
       resetUseFlow();
       setScanOverlayPhase('scanning');
       setActiveTab('home');
+  };
+
+  const abandonUseSession = async () => {
+      if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+      }
+
+      if (useSessionId) {
+          try {
+              await releaseUseQrSession(useSessionId);
+          } catch {
+              /* 既に解除済みなど */
+          }
+      }
+
+      closeUseScanOverlay();
   };
 
   const finishScanSuccess = (amount: number) => {
@@ -608,10 +624,7 @@ const CardHome = () => {
                   <button
                       type="button"
                       onClick={() => {
-                          if (document.activeElement instanceof HTMLElement) {
-                              document.activeElement.blur();
-                          }
-                          closeUseScanOverlay();
+                          void abandonUseSession();
                       }}
                       disabled={useFlowPhase === 'processing'}
                       className={`touch-manipulation flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-40 ${isSpecial ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-slate-800 hover:bg-gray-100 active:bg-gray-200'}`}

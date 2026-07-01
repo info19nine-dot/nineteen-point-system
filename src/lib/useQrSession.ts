@@ -62,3 +62,10 @@ export async function fetchUseQrSessionStatus(sessionId: string) {
     if (error) throw error;
     return data as UseQrSessionStatusResponse;
 }
+
+export async function releaseUseQrSession(sessionId: string) {
+    const { error } = await supabase.rpc('release_use_qr_session', {
+        p_session_id: sessionId,
+    });
+    if (error) throw error;
+}

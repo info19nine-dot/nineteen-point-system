@@ -109,7 +109,20 @@ const Dashboard = () => {
         });
     }, [createFreshUseSession]);
 
-    const handleRegenerateUseSession = () => {
+    const handleUseQrTap = () => {
+        if (isUseSessionLoading) return;
+
+        if (useSessionStatus === 'inputting') {
+            setConfirmModal({
+                show: true,
+                message: '入力中です。QRを出し直しますか？',
+                onConfirm: () => {
+                    void createFreshUseSession(true);
+                },
+            });
+            return;
+        }
+
         void createFreshUseSession(true);
     };
 
@@ -559,7 +572,7 @@ const Dashboard = () => {
                         status={useSessionStatus}
                         isInitializing={isUseSessionLoading && !activeUseSessionId}
                         isRegenerating={isUseSessionLoading && Boolean(activeUseSessionId)}
-                        onRegenerate={handleRegenerateUseSession}
+                        onTap={handleUseQrTap}
                     />
                 </div>
                 <button
