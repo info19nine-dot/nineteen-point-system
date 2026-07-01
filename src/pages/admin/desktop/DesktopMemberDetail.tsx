@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabaseClient';
+import { extractStaffSignature, formatTransactionDisplayText } from '../../../lib/transactionDisplay';
 import { ArrowLeft, Loader2, FileText, CheckCircle2, AlertTriangle, Ban, Home, AlertCircle } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/skeleton';
 
@@ -850,35 +851,28 @@ const DesktopMemberDetail = () => {
                                                 </td>
                                                 {/* Status Column Removed */}
                                                 <td className="px-6 py-4">
-                                                    <div className="flex flex-col">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-sm ${tx.is_cancelled ? 'text-gray-400 line-through' : 'text-slate-800'}`}>
-                                                                {(() => {
-                                                                    // New: Extract simple title for INFO
-                                                                    if (tx.type === 'INFO') {
-                                                                        return (tx.description || '').replace('【システム】', '').replace('会員による', '').split(':')[0].trim();
-                                                                    }
-
-                                                                    const desc = (tx.description || '')
-                                                                        .replace(/【修正:.*?】/, '') 
-                                                                        .replace(/【調整:.*?】/, '')
-                                                                        .replace(/\(元: \d+pt\)/, '')
-                                                                        .replace('【利用】', '')
-                                                                        .replace('【システム】', '')
-                                                                        .trim();
-                                                                    
-                                                                    if (desc.includes('Course QR:')) return desc.replace('Course QR:', '').trim();
-                                                                    if (desc === 'Point usage via QR scan' || desc === 'QRコード利用') return 'ポイント利用';
-                                                                    return desc.replace('Point usage via QR scan', 'ポイント利用') || (tx.type === 'EARN' ? 'ポイント獲得' : (tx.type === 'USE' ? 'ポイント利用' : '通知'));
-                                                                })()}
-                                                            </span>
-                                                            {tx.served_by && tx.served_by !== 'SYSTEM' && (
-                                                                <span className="text-xs text-slate-500 ml-1">
-                                                                    ({tx.served_by})
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                                    {(() => {
+                                                        const staffSignature = extractStaffSignature(tx.description);
+                                                        return (
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <div className="text-sm">
+                                                                    <span className={tx.is_cancelled ? 'text-gray-400 line-through' : 'text-slate-800'}>
+                                                                        {formatTransactionDisplayText(tx.description, tx.type)}
+                                                                    </span>
+                                                                    {tx.served_by && tx.served_by !== 'SYSTEM' && !tx.served_by.includes('システム') && (
+                                                                        <span className="text-xs text-slate-500 ml-1">
+                                                                            ({tx.served_by})
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {staffSignature && (
+                                                                    <div className="text-xs text-slate-500">
+                                                                        {staffSignature}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="px-6 py-4 text-center whitespace-nowrap">
                                                     <span className="font-bold text-lg text-slate-600">
