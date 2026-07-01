@@ -1,0 +1,27 @@
+# Supabase バックアップ確認チェックリスト
+
+プロジェクト: nineteen-point-system (safwaqsrvvwgnmsazrjm)
+
+## 1. 自動バックアップ（Proプラン以上）
+
+1. Supabase Dashboard → Project Settings → Database
+2. 「Backups」セクションを開く
+3. Daily backups が有効か確認
+4. 最新のバックアップ日時をメモ
+
+## 2. 無料プランの場合
+
+- 自動バックアップは含まれません
+- 重要データは定期的に手動エクスポートを検討:
+  - Table Editor → profiles / transactions を CSV エクスポート
+  - または pg_dump（Database Settings の接続情報）
+
+## 3. 復旧テスト（推奨・年1回）
+
+- ステージング用プロジェクトがあればリストア手順を試す
+- なければ「バックアップ一覧が見える」ことだけ確認でも可
+
+## 4. 認証情報
+
+- プロジェクトオーナー以外が Dashboard に入れるか確認
+- 2人目の管理者を Organization に追加しておくと安全

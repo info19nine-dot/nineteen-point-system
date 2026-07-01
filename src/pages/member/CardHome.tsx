@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Scan, QrCode, ChevronLeft, History as HistoryIcon, CheckCircle2, Settings, AlertTriangle, User, ShieldCheck } from 'lucide-react'; 
 import { FullScreenScanOverlay, type ScanOverlayPhase } from '../../components/features/card/FullScreenScanOverlay';
 import { parseUseSessionQr, releaseUseQrSession } from '../../lib/useQrSession';
+import { fetchPointsPaused } from '../../lib/appSettings';
 import { Skeleton } from '../../components/ui/skeleton';
 
 // 取引履歴の型定義
@@ -45,6 +46,7 @@ const CardHome = () => {
   // Real Data State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [pointsPaused, setPointsPaused] = useState(false);
   const useScanSessionRef = useRef(0);
 
   // Filtered & Formatted Transactions Logic
@@ -201,6 +203,27 @@ const CardHome = () => {
         },
         () => {
             fetchHistory();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetchPointsPaused().then(setPointsPaused);
+
+    const channel = supabase
+      .channel('app_settings:points_paused')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'app_settings' },
+        (payload: { new: { points_paused?: boolean } }) => {
+          setPointsPaused(payload.new.points_paused ?? false);
         }
       )
       .subscribe();
@@ -771,16 +794,27 @@ const CardHome = () => {
          </div>
       </div>
 
+      {/* Maintenance notice */}
+      {pointsPaused && (
+          <div className="mx-6 mt-3 max-w-md bg-orange-50 border border-orange-200 text-orange-800 text-xs font-bold text-center px-4 py-2.5 rounded-xl">
+              現在、ポイントの貯める・使う操作は一時停止中です
+          </div>
+      )}
+
       {/* Floating Action Buttons */}
       <div className="px-6 -mt-6 relative z-20 grid grid-cols-2 gap-3 max-w-md mx-auto">
           <button 
             onClick={() => {
+                if (pointsPaused) return;
                 setActiveModal(null);
                 setScanOverlayPhase('scanning');
                 setScanSuccessAmount(undefined);
                 setActiveTab('scan');
             }}
-            className={`p-3 rounded-xl shadow-lg flex flex-col items-center justify-center gap-1.5 transition-transform hover:-translate-y-1 active:scale-95 touch-manipulation relative overflow-hidden group ${
+            disabled={pointsPaused}
+            className={`p-3 rounded-xl shadow-lg flex flex-col items-center justify-center gap-1.5 transition-transform touch-manipulation relative overflow-hidden group ${
+                pointsPaused ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1 active:scale-95'
+            } ${
                 isSpecial 
                 ? 'bg-gradient-to-br from-yellow-700 to-yellow-900 text-white border border-yellow-500/30' 
                 : 'bg-slate-800 text-white shadow-slate-800/20'
@@ -795,12 +829,16 @@ const CardHome = () => {
 
           <button 
             onClick={() => {
+                if (pointsPaused) return;
                 useScanSessionRef.current += 1;
                 resetUseFlow();
                 setScanOverlayPhase('scanning');
                 setActiveTab('use-scan');
             }}
-            className={`p-3 rounded-xl shadow-lg flex flex-col items-center justify-center gap-1.5 transition-transform hover:-translate-y-1 active:scale-95 touch-manipulation ${
+            disabled={pointsPaused}
+            className={`p-3 rounded-xl shadow-lg flex flex-col items-center justify-center gap-1.5 transition-transform touch-manipulation ${
+                pointsPaused ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1 active:scale-95'
+            } ${
                 isSpecial 
                 ? 'bg-gradient-to-br from-slate-800 to-[#1a1d24] border border-slate-700' 
                 : 'bg-white hover:bg-gray-50'

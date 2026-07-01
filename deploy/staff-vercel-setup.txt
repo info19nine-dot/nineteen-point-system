@@ -1,0 +1,61 @@
+# スタッフ用 Vercel 2サイト目 セットアップ手順
+
+会員用とスタッフ用で URL を分け、会員がスタッフ画面に迷い込みにくくします。
+
+## 前提
+
+- 会員用: nineteen-point-system.vercel.app（既存・build:member）
+- スタッフ用: 新規 Vercel プロジェクト（build:staff）
+
+## 手順
+
+### 1. Vercel で新プロジェクト作成
+
+1. https://vercel.com → Add New → Project
+2. 同じ GitHub リポジトリ `nineteen-point-system` を選択
+3. プロジェクト名例: `nineteen-staff`
+
+### 2. Build 設定（重要）
+
+| 項目 | 値 |
+|------|-----|
+| Framework Preset | Vite |
+| Build Command | `npm run build:staff` |
+| Output Directory | `dist` |
+| Install Command | `npm install` |
+
+### 3. 環境変数
+
+会員用と同じ値を設定（Production / Preview / Development すべて）:
+
+- `VITE_SUPABASE_URL` = https://safwaqsrvvwgnmsazrjm.supabase.co
+- `VITE_SUPABASE_ANON_KEY` = （Supabase Dashboard → API → anon key）
+
+### 4. デプロイ
+
+- Deploy を実行
+- 本番 URL 例: `nineteen-staff.vercel.app`
+
+### 5. Supabase Auth 設定
+
+Supabase → Authentication → URL Configuration → Redirect URLs に追加:
+
+- `https://nineteen-staff.vercel.app/**`
+- `https://nineteen-staff.vercel.app/portal/staff`
+
+### 6. スタッフへの共有
+
+- 会員: 会員用 URL のみ配布
+- スタッフ: スタッフ用 URL `/portal/staff` を口頭・メモで共有
+- 会員用サイトにはスタッフリンクを載せない（現状どおり）
+
+### 7. 確認
+
+- [ ] スタッフ URL でログイン → STORE / OFFICE 選択が出る
+- [ ] 会員 URL で `/portal/staff` を開いても会員アプリの 404 になる（別サイトのため）
+- [ ] PWA インストール時、スタッフ用はスタッフアイコン・タイトル（NINE-TEEN Staff）
+
+## 補足
+
+- 1つのリポジトリから `VITE_APP_MODE=staff` で別ビルドになる設計です
+- 会員用プロジェクトの Build Command は `npm run build`（= build:member）のまま
