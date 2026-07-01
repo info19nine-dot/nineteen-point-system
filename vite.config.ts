@@ -32,13 +32,17 @@ export default defineConfig(() => {
   const mode = getBuildMode()
   const isStaff = mode === 'staff'
   const iconBase = `icons/${mode}`
+  const buildId = process.env.VERCEL_GIT_COMMIT_SHA ?? `local-${Date.now()}`
 
   return {
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(buildId),
+    },
     plugins: [
       react(),
       htmlTransformPlugin(mode),
       VitePWA({
-        registerType: 'prompt',
+        registerType: 'autoUpdate',
         includeAssets: [
           `${iconBase}/apple-touch-icon.png`,
           `${iconBase}/pwa-192x192.png`,
@@ -82,6 +86,8 @@ export default defineConfig(() => {
         workbox: {
           globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
           navigateFallback: '/index.html',
+          skipWaiting: true,
+          clientsClaim: true,
           cleanupOutdatedCaches: true,
           runtimeCaching: [
             {
@@ -104,6 +110,10 @@ export default defineConfig(() => {
         closeBundle() {
           const dist = path.resolve(__dirname, 'dist')
           fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'))
+          fs.writeFileSync(
+            path.join(dist, 'version.json'),
+            JSON.stringify({ buildId }),
+          )
         },
       },
     ],
