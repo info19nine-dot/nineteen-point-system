@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../lib/supabaseClient';
 import { STAFF_MODE_SELECT_PATH } from '../../../lib/routes';
 import { extractStaffSignature, formatTransactionDisplayText } from '../../../lib/transactionDisplay';
-import { AlertTriangle, ChevronRight, Filter, ChevronDown, ChevronUp, FileText, ArrowLeft, ArrowRight, Calendar, X, User, FileSpreadsheet, Download, Loader2, ShieldCheck, Clock, CheckCircle2, Database, Info, Home, Search, Menu, LayoutGrid } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Filter, ChevronDown, ChevronUp, FileText, ArrowLeft, ArrowRight, Calendar, X, User, FileSpreadsheet, Download, Loader2, ShieldCheck, Clock, CheckCircle2, Database, Info, Home, Search, Menu, LayoutGrid, ShieldAlert } from 'lucide-react';
 import { Skeleton } from '../../../components/ui/skeleton';
 
 type SortKey = 'points' | 'lastVisit' | 'name' | 'email';
@@ -795,6 +795,19 @@ const DesktopDashboard = () => {
                                                 <LayoutGrid size={16} />
                                             </div>
                                             モード選択
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                navigate('/admin/office/maintenance');
+                                            }}
+                                            className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-orange-600 flex items-center gap-3 transition-colors"
+                                        >
+                                            <div className="p-1.5 bg-orange-50 rounded text-orange-500">
+                                                <ShieldAlert size={16} />
+                                            </div>
+                                            メンテナンスモード
                                         </button>
                                     </div>
                                 )}

@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Plus, Trash2, Pencil, ChevronUp, ChevronDown, AlertCircle, HelpCircle, PauseCircle, PlayCircle } from 'lucide-react';
-import { fetchPointsPaused, setPointsPaused } from '../../lib/appSettings';
+import { ChevronLeft, Plus, Trash2, Pencil, ChevronUp, ChevronDown, AlertCircle, HelpCircle } from 'lucide-react';
 
 type Course = {
     id: string;
@@ -33,10 +32,6 @@ const Settings = () => {
     const [errorModal, setErrorModal] = useState<{show: boolean, message: string}>({show: false, message: ''});
     const [confirmModal, setConfirmModal] = useState<{show: boolean, message: string, onConfirm: () => void}>({show: false, message: '', onConfirm: () => {}});
 
-    const [pointsPaused, setPointsPausedState] = useState(false);
-    const [loadingMaintenance, setLoadingMaintenance] = useState(true);
-    const [togglingMaintenance, setTogglingMaintenance] = useState(false);
-
     const fetchCourses = async () => {
 
         const { data, error } = await supabase
@@ -54,7 +49,6 @@ const Settings = () => {
 
     useEffect(() => {
         fetchCourses();
-        fetchPointsPaused().then(setPointsPausedState).finally(() => setLoadingMaintenance(false));
     }, []);
 
     if (!session) return <div>Access Denied</div>;
@@ -160,18 +154,6 @@ const Settings = () => {
         fetchCourses();
     };
 
-    const handleToggleMaintenance = async () => {
-        const next = !pointsPaused;
-        setTogglingMaintenance(true);
-        const error = await setPointsPaused(next);
-        setTogglingMaintenance(false);
-        if (error) {
-            setErrorModal({ show: true, message: 'メンテナンス設定の更新に失敗しました' });
-            return;
-        }
-        setPointsPausedState(next);
-    };
-
     return (
         <div className="min-h-screen bg-slate-100 pb-20">
             {/* Header */}
@@ -189,39 +171,6 @@ const Settings = () => {
             </header>
 
             <main className="max-w-md mx-auto px-6 py-6 space-y-8">
-                <section className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                    <h2 className="font-bold text-slate-700 mb-2 flex items-center gap-2">
-                        <PauseCircle size={18} className="text-orange-500" />
-                        ポイント操作の一時停止
-                    </h2>
-                    <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                        ONにすると会員の「貯める」「使う」だけ停止します。ログインと履歴閲覧はできます。
-                    </p>
-                    <button
-                        onClick={handleToggleMaintenance}
-                        disabled={loadingMaintenance || togglingMaintenance}
-                        className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${
-                            pointsPaused
-                                ? 'bg-teal-600 text-white hover:bg-teal-700'
-                                : 'bg-orange-500 text-white hover:bg-orange-600'
-                        }`}
-                    >
-                        {togglingMaintenance ? (
-                            '更新中...'
-                        ) : pointsPaused ? (
-                            <>
-                                <PlayCircle size={18} />
-                                再開する（現在: 停止中）
-                            </>
-                        ) : (
-                            <>
-                                <PauseCircle size={18} />
-                                貯める・使うを停止する
-                            </>
-                        )}
-                    </button>
-                </section>
-
                 <section className="animate-in fade-in slide-in-from-left-4 duration-300">
                     {/* Course Settings Content */}
                     <div className="space-y-4">

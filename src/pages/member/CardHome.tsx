@@ -797,7 +797,7 @@ const CardHome = () => {
       {/* Maintenance notice */}
       {pointsPaused && (
           <div className="mx-6 mt-3 max-w-md bg-orange-50 border border-orange-200 text-orange-800 text-xs font-bold text-center px-4 py-2.5 rounded-xl">
-              現在、ポイントの貯める・使う操作は一時停止中です
+              現在メンテナンス中です。貯める・使うはご利用いただけません
           </div>
       )}
 
