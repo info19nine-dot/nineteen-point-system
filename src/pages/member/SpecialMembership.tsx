@@ -145,7 +145,7 @@ const SpecialMembership = () => {
                 <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-gradient-to-br from-yellow-900/10 via-transparent to-transparent blur-[120px] rounded-full pointer-events-none"></div>
 
                 {/* Certificate Card - Premium Black Card Style with Thicker Border & Subtle Gradient */}
-                <div className="relative z-10 w-full max-w-sm aspect-[1/1.5] bg-gradient-to-b from-[#1c1c1c] to-[#0d0d0d] rounded-[24px] p-8 text-center shadow-[0_0_60px_-10px_rgba(234,179,8,0.25)] border-[3px] border-yellow-600/80 overflow-hidden group transition-all hover:scale-[1.01] duration-500">
+                <div className="relative z-10 w-full max-w-sm aspect-[1/1.58] bg-gradient-to-b from-[#1c1c1c] to-[#0d0d0d] rounded-[24px] p-8 text-center shadow-[0_0_60px_-10px_rgba(234,179,8,0.25)] border-[3px] border-yellow-600/80 overflow-hidden group transition-all hover:scale-[1.01] duration-500">
                     
                     {/* Metallic Shine on Border (Inner Ring) */}
                     <div className="absolute inset-0 rounded-[21px] border border-yellow-400/20 pointer-events-none"></div>
