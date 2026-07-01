@@ -201,8 +201,8 @@ const SpecialMembership = () => {
                     {/* Live Status (Bottom Area) */}
                     {/* Live Status (Bottom Area) - Anti-Screenshot */}
                     <div className="relative w-full mt-4">
-                         <div className="w-full bg-[#0a0a0a]/90 border border-green-900/30 rounded-xl p-2 backdrop-blur-sm shadow-inner overflow-hidden relative group">
-                             <div className="flex flex-col items-center justify-center my-1 relative z-10 w-full">
+                         <div className="w-full bg-[#0a0a0a]/90 border border-green-900/30 rounded-xl px-3 py-2.5 backdrop-blur-sm shadow-inner overflow-hidden relative group">
+                             <div className="flex flex-col items-center justify-center relative z-10 w-full min-w-0">
                                  {/* Status Indicator (Pulse Only) */}
                                  <div className="flex items-center gap-2 mb-1">
                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div>
@@ -210,11 +210,11 @@ const SpecialMembership = () => {
                                  </div>
                                  
                                  {/* Clock Only */}
-                                 <div className="text-3xl font-serif font-bold text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] tabular-nums leading-none mb-1">
+                                 <div className="text-3xl font-serif font-bold text-white tracking-wide drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] tabular-nums leading-none mb-1 max-w-full">
                                      {currentTime.toLocaleTimeString('ja-JP', { hour12: false })}
                                  </div>
-                                 {/* Date Restored */}
-                                 <div className="text-[10px] text-green-500/80 font-mono tracking-widest uppercase">
+                                 {/* Date */}
+                                 <div className="text-[10px] text-green-500/80 font-mono tracking-normal tabular-nums px-1 max-w-full text-center">
                                      {currentTime.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')}
                                  </div>
                              </div>
