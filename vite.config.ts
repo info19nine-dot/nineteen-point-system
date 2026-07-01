@@ -80,9 +80,18 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
           navigateFallback: '/index.html',
+          cleanupOutdatedCaches: true,
           runtimeCaching: [
+            {
+              urlPattern: ({ request }) => request.mode === 'navigate',
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'pages',
+                expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 },
+              },
+            },
             {
               urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
               handler: 'NetworkOnly',
