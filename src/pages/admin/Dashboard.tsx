@@ -552,12 +552,12 @@ const Dashboard = () => {
 
             {/* Point Grant Card */}
             <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
-                <div className="mb-4 flex gap-4">
+                <div className="mb-4 grid grid-cols-2 gap-4">
                     <button 
                         onClick={() => {
                             setShowQrModal(true);
                         }}
-                        className="flex-1 bg-slate-800 text-white font-black text-lg py-4 rounded-2xl shadow-xl shadow-slate-800/30 transition-all active:scale-95 touch-manipulation flex flex-col items-center justify-center gap-2"
+                        className="flex aspect-square w-full touch-manipulation flex-col items-center justify-center gap-2 rounded-2xl bg-slate-800 text-lg font-black text-white shadow-xl shadow-slate-800/30 transition-all active:scale-95"
                     >
                         <div className="bg-white/10 p-2 rounded-full">
                             <QrCode size={24} />

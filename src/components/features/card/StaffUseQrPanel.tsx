@@ -45,7 +45,7 @@ export function StaffUseQrPanel({
             onClick={onTap}
             disabled={isInitializing || isRegenerating || !sessionId}
             aria-label="ポイント使用QR。タップで出し直し"
-            className="relative flex min-h-0 min-w-0 flex-1 touch-manipulation flex-col items-center justify-center self-stretch rounded-2xl bg-white py-4 shadow-xl shadow-slate-800/10 transition-all active:scale-95 disabled:opacity-60"
+            className="relative flex aspect-square w-full touch-manipulation items-center justify-center rounded-2xl bg-white p-1 shadow-xl shadow-slate-800/10 transition-all active:scale-95 disabled:opacity-60"
         >
             {isInitializing ? (
                 <Loader2 className="animate-spin text-teal-500" size={40} />
@@ -72,7 +72,7 @@ export function StaffUseQrPanel({
                     )}
                 </div>
             ) : (
-                <div className="h-24 w-24" />
+                <div className="aspect-square w-full max-w-[40px]" />
             )}
         </button>
     );
