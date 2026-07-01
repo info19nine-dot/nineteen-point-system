@@ -40,6 +40,8 @@ const Dashboard = () => {
     const [activeUseSessionId, setActiveUseSessionId] = useState<string | null>(null);
     const [useSessionStatus, setUseSessionStatus] = useState<'waiting' | 'inputting'>('waiting');
     const [isUseSessionLoading, setIsUseSessionLoading] = useState(false);
+    const [showUseQrSuccess, setShowUseQrSuccess] = useState(false);
+    const [useSuccessAmount, setUseSuccessAmount] = useState<number | null>(null);
     const useCompleteHandledRef = useRef(false);
     const completedSessionHandledRef = useRef<string | null>(null);
     const useSessionOpInFlightRef = useRef(false);
@@ -99,14 +101,21 @@ const Dashboard = () => {
         }
     }, [activeUseSessionId]);
 
-    const finishUseQrFlow = useCallback(() => {
+    const finishUseQrFlow = useCallback((amount: number) => {
         if (useCompleteHandledRef.current) return;
         useCompleteHandledRef.current = true;
 
+        setUseSuccessAmount(amount);
+        setShowUseQrSuccess(true);
         void fetchData();
         void createFreshUseSession(false).finally(() => {
             useCompleteHandledRef.current = false;
         });
+
+        window.setTimeout(() => {
+            setShowUseQrSuccess(false);
+            setUseSuccessAmount(null);
+        }, 3000);
     }, [createFreshUseSession]);
 
     const handleUseQrTap = () => {
@@ -163,7 +172,7 @@ const Dashboard = () => {
             if (row.status === 'completed' && row.amount != null) {
                 if (completedSessionHandledRef.current !== sessionId) {
                     completedSessionHandledRef.current = sessionId;
-                    finishUseQrFlow();
+                    finishUseQrFlow(row.amount);
                 }
                 return;
             }
@@ -187,12 +196,7 @@ const Dashboard = () => {
                 (payload: { new: { type?: string; amount?: number } }) => {
                     const tx = payload.new;
                     if (tx.type !== 'USE' || tx.amount == null) return;
-                    finishUseQrFlow();
-                }
-            )
-            .subscribe();
-
-        const sessionChannel = supabase
+                    finishUseQrFlow(Number(tx.amount));
             .channel(`use-qr-session:${sessionId}`)
             .on(
                 'postgres_changes',
@@ -213,7 +217,7 @@ const Dashboard = () => {
                     if (row.status === 'completed' && row.amount != null) {
                         if (completedSessionHandledRef.current !== sessionId) {
                             completedSessionHandledRef.current = sessionId;
-                            finishUseQrFlow();
+                            finishUseQrFlow(row.amount);
                         }
                     }
                 }
@@ -910,6 +914,25 @@ const Dashboard = () => {
         )}
 
         {/* Full History Overlay */}
+
+        {showUseQrSuccess && useSuccessAmount != null && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
+                <div className="w-[90%] max-w-sm rounded-3xl bg-white p-8 text-center shadow-2xl">
+                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                        <CheckCircle2 size={48} />
+                    </div>
+                    <h3 className="mb-2 text-2xl font-black text-slate-800">受付完了！</h3>
+                    <p className="mb-6 text-gray-500">ポイント利用を受け付けました。</p>
+                    <div className="rounded-xl border border-gray-100 bg-slate-50 p-4">
+                        <div className="mb-1 text-xs text-gray-400">利用ポイント</div>
+                        <div className="text-3xl font-black text-slate-800">
+                            -{useSuccessAmount.toLocaleString()}{' '}
+                            <span className="text-base font-normal text-gray-400">pt</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {showEarnQrSuccess && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">

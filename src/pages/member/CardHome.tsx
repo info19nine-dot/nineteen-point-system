@@ -675,15 +675,15 @@ const CardHome = () => {
                           </button>
                           <button
                               type="button"
-                              onClick={() => {
-                                  resetUseFlow();
-                                  setActiveTab('use-scan');
-                                  setScanOverlayPhase('scanning');
-                              }}
+                              onClick={() => void abandonUseSession()}
                               disabled={useFlowPhase === 'processing'}
-                              className={`mt-4 text-sm font-bold ${isSpecial ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                              className={`mt-3 w-full rounded-xl border py-3 text-sm font-bold active:scale-95 transition-transform ${
+                                  isSpecial
+                                      ? 'border-gray-600 text-gray-400 hover:text-gray-200'
+                                      : 'border-gray-200 text-gray-500 hover:text-gray-700'
+                              }`}
                           >
-                              別のQRを読み取る
+                              キャンセル
                           </button>
                   </div>
               </div>
