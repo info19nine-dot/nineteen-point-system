@@ -19,17 +19,17 @@ export function StaffUseQrPanel({
     onTap,
 }: StaffUseQrPanelProps) {
     const containerRef = useRef<HTMLButtonElement>(null);
-    const [qrPx, setQrPx] = useState(120);
+    const [qrPx, setQrPx] = useState(0);
     const qrPayload = useMemo(() => (sessionId ? buildUseSessionQrPayload(sessionId) : ''), [sessionId]);
-    const showQr = Boolean(sessionId) && !isInitializing;
+    const showQr = Boolean(sessionId) && !isInitializing && qrPx > 0;
 
     useLayoutEffect(() => {
         const el = containerRef.current;
         if (!el) return;
 
         const update = () => {
-            const size = Math.floor(Math.min(el.clientWidth, el.clientHeight)) - 4;
-            if (size > 0) setQrPx(size);
+            const size = Math.floor(Math.min(el.clientWidth, el.clientHeight));
+            setQrPx(size);
         };
 
         update();
@@ -45,12 +45,14 @@ export function StaffUseQrPanel({
             onClick={onTap}
             disabled={isInitializing || isRegenerating || !sessionId}
             aria-label="ポイント使用QR。タップで出し直し"
-            className="relative flex aspect-square w-full touch-manipulation items-center justify-center rounded-2xl bg-white p-1 shadow-xl shadow-slate-800/10 transition-all active:scale-95 disabled:opacity-60"
+            className="relative aspect-square w-full touch-manipulation overflow-hidden rounded-2xl bg-white p-0 shadow-xl shadow-slate-800/10 transition-transform active:scale-95 disabled:opacity-60"
         >
             {isInitializing ? (
-                <Loader2 className="animate-spin text-teal-500" size={40} />
+                <span className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-teal-500" size={40} />
+                </span>
             ) : showQr ? (
-                <div className="relative flex items-center justify-center">
+                <>
                     <QRCodeCanvas
                         value={qrPayload}
                         size={qrPx}
@@ -58,6 +60,7 @@ export function StaffUseQrPanel({
                         fgColor="#000000"
                         level="H"
                         includeMargin={false}
+                        className="block h-full w-full"
                         style={{
                             width: qrPx,
                             height: qrPx,
@@ -66,14 +69,12 @@ export function StaffUseQrPanel({
                         }}
                     />
                     {status === 'inputting' && (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/75">
+                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/75">
                             <span className="text-sm font-bold tracking-widest text-teal-600">入力中</span>
-                        </div>
+                        </span>
                     )}
-                </div>
-            ) : (
-                <div className="aspect-square w-full max-w-[40px]" />
-            )}
+                </>
+            ) : null}
         </button>
     );
 }
