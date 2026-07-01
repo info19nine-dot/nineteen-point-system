@@ -106,14 +106,8 @@ const DesktopDashboard = () => {
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
 
-    // Menu & Admin Modal State
+    // Menu State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [showAdminModal, setShowAdminModal] = useState(false);
-    
-    // Admin Promotion State
-    const [promotionEmail, setPromotionEmail] = useState('');
-    const [isPromoting, setIsPromoting] = useState(false);
-    const [promotionMessage, setPromotionMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
     const [sortKey, setSortKey] = useState<SortKey>('lastVisit');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -505,7 +499,7 @@ const DesktopDashboard = () => {
             
             <div className="overflow-y-auto flex-grow">
                 <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+                    <thead className="sticky top-0 z-[1] bg-slate-50 shadow-sm">
                         <tr className="border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider">
                             <th className="px-6 py-4 font-bold w-40">日時</th>
                             <th className="px-6 py-4 font-bold">会員名</th>
@@ -718,7 +712,7 @@ const DesktopDashboard = () => {
         <div className="h-screen bg-slate-100 font-sans text-slate-800 flex flex-col overflow-hidden">
             
             {/* Desktop Header */}
-            <header className="bg-slate-800 text-white shadow-md z-30 sticky top-0 flex-shrink-0">
+            <header className="bg-slate-800 text-white shadow-md z-50 sticky top-0 flex-shrink-0">
                 <div className="max-w-5xl mx-auto px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-8">
                         <div className="flex items-center gap-4">
@@ -771,7 +765,7 @@ const DesktopDashboard = () => {
                                 <Home size={20} />
                             </button>
 
-                            <div className="relative z-50">
+                            <div className="relative">
                                 <button 
                                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                                     className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${
@@ -785,7 +779,7 @@ const DesktopDashboard = () => {
                                 </button>
 
                                 {isMenuOpen && (
-                                    <div className="absolute right-0 top-12 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                    <div className="absolute right-0 top-12 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                                         <div className="px-4 py-3 border-b border-gray-100 mb-1">
                                             <p className="text-xs text-gray-400 font-medium">メニュー</p>
                                         </div>
@@ -801,19 +795,6 @@ const DesktopDashboard = () => {
                                                 <LayoutGrid size={16} />
                                             </div>
                                             モード選択
-                                        </button>
-                                        
-                                        <button 
-                                            onClick={() => {
-                                                setIsMenuOpen(false);
-                                                setShowAdminModal(true);
-                                            }}
-                                            className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-teal-600 flex items-center gap-3 transition-colors"
-                                        >
-                                            <div className="p-1.5 bg-slate-100 rounded text-slate-500">
-                                                <ShieldCheck size={16} />
-                                            </div>
-                                            管理者昇格
                                         </button>
                                     </div>
                                 )}
@@ -1098,7 +1079,7 @@ const DesktopDashboard = () => {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col flex-1 overflow-hidden">
                     <div className="overflow-y-auto flex-grow">
                         <table className="w-full text-left border-collapse table-fixed">
-                            <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+                            <thead className="sticky top-0 z-[1] bg-slate-50 shadow-sm">
                                 <tr className="border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider">
                                     <th className="px-2 py-2 font-bold text-left cursor-pointer hover:bg-slate-100 transition-colors w-[180px] pl-4" onClick={() => handleSort('name')}>
                                         氏名 <SortIcon active={sortKey === 'name'} />
@@ -1303,77 +1284,6 @@ const DesktopDashboard = () => {
                             >
                                 閉じる
                             </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Admin Promotion Modal */}
-            {showAdminModal && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
-                            <h3 className="font-bold flex items-center gap-2">
-                                <ShieldCheck size={20} className="text-teal-400" />
-                                管理者権限の付与
-                            </h3>
-                            <button 
-                                onClick={() => setShowAdminModal(false)}
-                                className="text-slate-400 hover:text-white transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        
-                        <div className="p-6">
-                            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                                一般スタッフのアカウントを管理者に昇格させます。<br/>
-                                管理者になると、PC管理画面および設定へのアクセスが可能になります。
-                            </p>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 block mb-1">対象スタッフの会員番号</label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full p-3 bg-gray-50 rounded-lg text-sm outline-none border border-gray-200 focus:border-teal-500 focus:bg-white transition-all font-mono"
-                                        placeholder="123456"
-                                        value={promotionEmail}
-                                        onChange={(e) => setPromotionEmail(e.target.value)}
-                                    />
-                                </div>
-
-                                {promotionMessage && (
-                                    <div className={`p-3 rounded-lg text-sm flex items-start gap-2 ${promotionMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                        {promotionMessage.type === 'success' ? <CheckCircle2 size={16} className="mt-0.5 shrink-0" /> : <AlertTriangle size={16} className="mt-0.5 shrink-0" />}
-                                        {promotionMessage.text}
-                                    </div>
-                                )}
-
-                                <button 
-                                    onClick={async () => {
-                                        if (!promotionEmail) return;
-                                        setIsPromoting(true);
-                                        setPromotionMessage(null);
-                                        
-                                        // Mock implementation for UI only as requested
-                                        // In real app, this would call Supabase Edge Function or RPC
-                                        setTimeout(() => {
-                                            setIsPromoting(false);
-                                            setPromotionMessage({
-                                                type: 'success',
-                                                text: `${promotionEmail} に管理者権限を付与しました。(モック)`
-                                            });
-                                            setPromotionEmail('');
-                                        }, 1000);
-                                    }}
-                                    disabled={!promotionEmail || isPromoting}
-                                    className="w-full py-3 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isPromoting ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
-                                    管理者にする
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>

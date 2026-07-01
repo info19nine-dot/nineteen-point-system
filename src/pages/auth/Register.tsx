@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, User, AlertCircle, CheckCircle, Phone, Calendar } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
 
 const Register = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    
-    // Special Membership State
-    const [isSpecial, setIsSpecial] = useState(false);
-    const [phone, setPhone] = useState('');
-    const [birthdate, setBirthdate] = useState('');
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -23,24 +18,11 @@ const Register = () => {
         setError(null);
 
         try {
-            // Prepared Metadata
-            const metadata: any = {
-                name: name,
-            };
-
-            if (isSpecial) {
-                metadata.phone = phone;
-                metadata.birthdate = birthdate;
-                metadata.membership_status = 'pending';
-                metadata.application_date = new Date().toISOString();
-                // We keep rank as 'regular' initially. Staff approves it.
-            }
-
             const { error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
-                    data: metadata,
+                    data: { name },
                 },
             });
 
@@ -128,49 +110,6 @@ const Register = () => {
                                 minLength={6}
                                 required
                             />
-                        </div>
-                    </div>
-
-                    {/* Special Membership Application */}
-                    <div className="bg-white border border-yellow-200 rounded-xl p-4 shadow-sm transition-all hover:shadow-md hover:border-yellow-300">
-                        <div className="flex items-center gap-3 mb-2">
-                             <input
-                                id="apply-special"
-                                type="checkbox"
-                                className="w-5 h-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer"
-                                checked={isSpecial}
-                                onChange={(e) => setIsSpecial(e.target.checked)}
-                             />
-                             <label htmlFor="apply-special" className="font-bold text-slate-700 cursor-pointer select-none flex-1">
-                                 特別会員として申し込む
-                                 <span className="block text-xs text-yellow-600 font-normal mt-0.5">※追加情報の入力が必要です</span>
-                             </label>
-                        </div>
-
-                        {/* Conditional Fields */}
-                        <div className={`space-y-4 overflow-hidden transition-all duration-300 ${isSpecial ? 'max-h-60 mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
-                            <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-yellow-500" size={20} />
-                                <input 
-                                    type="tel"
-                                    placeholder="電話番号" 
-                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-yellow-50/30 text-sm"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    required={isSpecial}
-                                />
-                            </div>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-yellow-500" size={20} />
-                                <input 
-                                    type="date"
-                                    placeholder="生年月日" 
-                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-yellow-50/30 text-sm text-gray-600"
-                                    value={birthdate}
-                                    onChange={(e) => setBirthdate(e.target.value)}
-                                    required={isSpecial}
-                                />
-                            </div>
                         </div>
                     </div>
 

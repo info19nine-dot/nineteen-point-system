@@ -15,19 +15,14 @@ const StaffLogin = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [rememberId, setRememberId] = useState(false);
-    const [rememberPassword, setRememberPassword] = useState(false);
 
     useEffect(() => {
-        const savedId = localStorage.getItem('staff_login_id');
-        const savedPassword = localStorage.getItem('staff_password');
+        localStorage.removeItem('staff_password');
 
+        const savedId = localStorage.getItem('staff_login_id');
         if (savedId) {
             setLoginId(savedId);
             setRememberId(true);
-        }
-        if (savedPassword) {
-            setPassword(savedPassword);
-            setRememberPassword(true);
         }
     }, []);
 
@@ -76,12 +71,6 @@ const StaffLogin = () => {
                 localStorage.setItem('staff_login_id', loginId);
             } else {
                 localStorage.removeItem('staff_login_id');
-            }
-
-            if (rememberPassword) {
-                localStorage.setItem('staff_password', password);
-            } else {
-                localStorage.removeItem('staff_password');
             }
 
             await refreshProfile();
@@ -135,10 +124,10 @@ const StaffLogin = () => {
 
                     <div className="space-y-4">
                         <div>
-                            <label className="text-xs font-bold text-slate-400 ml-1 mb-1 block">管理者ID</label>
+                            <label className="text-xs font-bold text-slate-400 ml-1 mb-1 block">スタッフID</label>
                             <input
                                 type="text"
-                                placeholder="管理者IDを入力"
+                                placeholder="スタッフIDを入力"
                                 className="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-600 text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors font-mono"
                                 value={loginId}
                                 onChange={(e) => setLoginId(e.target.value)}
@@ -165,18 +154,6 @@ const StaffLogin = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
-                            <div className="mt-2 flex items-center">
-                                <input
-                                    id="remember-password"
-                                    type="checkbox"
-                                    className="w-4 h-4 rounded border-slate-600 bg-slate-900/80 text-teal-500 focus:ring-teal-500 focus:ring-offset-slate-900"
-                                    checked={rememberPassword}
-                                    onChange={(e) => setRememberPassword(e.target.checked)}
-                                />
-                                <label htmlFor="remember-password" className="ml-2 text-xs text-slate-400 cursor-pointer select-none">
-                                    パスワードを保存する
-                                </label>
-                            </div>
                         </div>
                     </div>
 
